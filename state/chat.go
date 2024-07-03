@@ -6,9 +6,8 @@ import (
 	"net/url"
 	"time"
 
+	//"github.com/google/uuid"
 	"github.com/mk6i/retro-aim-server/wire"
-
-	"github.com/google/uuid"
 )
 
 const (
@@ -18,6 +17,8 @@ const (
 	// PublicExchange is the ID of the exchange that hosts public chat rooms
 	// created by the server operator exclusively.
 	PublicExchange uint16 = 5
+	// detailLevel is the detail level of the chatroom. Pidgin 2.13.0 expects 0x02
+	DetailLevel uint8 = 2
 )
 
 // ErrChatRoomNotFound indicates that a chat room lookup failed.
@@ -69,6 +70,7 @@ func (c ChatRoom) TLVList() []wire.TLV {
 		wire.NewTLV(wire.ChatRoomTLVFlags, uint16(15)),
 		wire.NewTLV(wire.ChatRoomTLVCreateTime, uint32(c.CreateTime.Unix())),
 		wire.NewTLV(wire.ChatRoomTLVMaxMsgLen, uint16(1024)),
+		wire.NewTLV(wire.ChatRoomTLVMaxMsgVisLen, uint16(1024)),
 		wire.NewTLV(wire.ChatRoomTLVMaxOccupancy, uint16(100)),
 		// From protocols/oscar/family_chatnav.c in lib purple, these are the
 		// room creation permission values:
@@ -85,7 +87,7 @@ func (c ChatRoom) TLVList() []wire.TLV {
 // NewChatRoom creates new state.ChatRoom objects
 func NewChatRoom() ChatRoom {
 	return ChatRoom{
-		Cookie:     uuid.New().String(),
+		//Cookie:     uuid.New().String(),
 		CreateTime: time.Now().UTC(),
 	}
 }

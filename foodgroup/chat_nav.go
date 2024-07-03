@@ -96,10 +96,11 @@ func (s ChatNavService) CreateRoom(_ context.Context, sess *state.Session, inFra
 
 		room = s.fnNewChatRoom()
 		room.Creator = sess.IdentScreenName()
-		room.DetailLevel = inBody.DetailLevel
+		room.DetailLevel = state.DetailLevel
 		room.Exchange = inBody.Exchange
-		room.InstanceNumber = inBody.InstanceNumber
+		room.InstanceNumber = 65535
 		room.Name = name
+		room.Cookie = name
 
 		if err := s.chatRoomManager.CreateChatRoom(room); err != nil {
 			return wire.SNACMessage{}, fmt.Errorf("unable to create chat room: %w", err)
@@ -162,8 +163,8 @@ func (s ChatNavService) RequestRoomInfo(_ context.Context, inFrame wire.SNACFram
 					wire.NewTLV(wire.ChatNavTLVRoomInfo, wire.SNAC_0x0E_0x02_ChatRoomInfoUpdate{
 						Exchange:       room.Exchange,
 						Cookie:         room.Cookie,
-						InstanceNumber: room.InstanceNumber,
-						DetailLevel:    room.DetailLevel,
+						InstanceNumber: 65535,
+						DetailLevel:    state.DetailLevel,
 						TLVBlock: wire.TLVBlock{
 							TLVList: room.TLVList(),
 						},

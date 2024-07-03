@@ -474,7 +474,9 @@ func (f SQLiteUserStore) BARTRetrieve(hash []byte) ([]byte, error) {
 // ErrChatRoomNotFound if the room does not exist for cookie.
 func (f SQLiteUserStore) ChatRoomByCookie(cookie string) (ChatRoom, error) {
 	chatRoom := ChatRoom{
-		Cookie: cookie,
+		Cookie:         cookie,
+		DetailLevel:    0x02,
+		InstanceNumber: 65535,
 	}
 
 	q := `
@@ -508,7 +510,7 @@ func (f SQLiteUserStore) ChatRoomByName(exchange uint16, name string) (ChatRoom,
 	q := `
 		SELECT cookie, created, creator
 		FROM chatRoom
-		WHERE exchange = ? AND name = ?
+		WHERE exchange = ? AND name = ? COLLATE NOCASE
 	`
 	var creator string
 	err := f.db.QueryRow(q, exchange, name).Scan(
