@@ -88,6 +88,22 @@ const (
 	LoginTLVTagsAuthorizationCookie uint16 = 0x06
 	LoginTLVTagsErrorSubcode        uint16 = 0x08
 	LoginTLVTagsPasswordHash        uint16 = 0x25
+	LoginTLVTagsUseOldMD5           uint16 = 0x004c
+
+	LoginTLVTagsClientIDString           uint16 = 0x0003
+	LoginTLVTagsClientCountry            uint16 = 0x000e
+	LoginTLVTagsClientLanguage           uint16 = 0x000f
+	LoginTLVTagsClientDistributionNumber uint16 = 0x0014
+	LoginTLVTagsClientIDNumber           uint16 = 0x0016
+	LoginTLVTagsClientMajorVersion       uint16 = 0x0017
+	LoginTLVTagsClientMinorVersion       uint16 = 0x0018
+	LoginTLVTagsClientLesserVersion      uint16 = 0x0019
+	LoginTLVTagsClientBuildNumber        uint16 = 0x001a
+	LoginTLVTagsClientMultiConn          uint16 = 0x004a
+	LoginTLVTagsClientReconnect          uint16 = 0x0094
+	ClientMultiConnLevelOldClient        uint8  = 0x00
+	ClientMultiConnLevelMulti            uint8  = 0x01
+	ClientMultiConnLevelSingle           uint8  = 0x03
 )
 
 const (

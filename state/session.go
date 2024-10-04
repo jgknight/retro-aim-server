@@ -41,6 +41,7 @@ type Session struct {
 	uin               uint32
 	warning           uint16
 	userInfoBitmask   uint16
+	clientSoftware    ClientSoftware
 	userStatusBitmask uint32
 }
 
@@ -56,6 +57,20 @@ func NewSession() *Session {
 		userInfoBitmask:   wire.OServiceUserFlagOSCARFree,
 		userStatusBitmask: wire.OServiceUserStatusAvailable,
 	}
+}
+
+// SetClientSoftware sets the client software
+func (s *Session) SetClientSoftware(clientSoftware ClientSoftware) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+	s.clientSoftware = clientSoftware
+}
+
+// ClientSoftware returns clientSoftware
+func (s *Session) ClientSoftware() ClientSoftware {
+	s.mutex.RLock()
+	defer s.mutex.RUnlock()
+	return s.clientSoftware
 }
 
 // SetUserInfoFlag sets a flag to and returns UserInfoBitmask
@@ -347,4 +362,18 @@ func (s *Session) Close() {
 // Closed blocks until the session is closed.
 func (s *Session) Closed() <-chan struct{} {
 	return s.stopCh
+}
+
+// ClientSoftware holds information about the client software
+type ClientSoftware struct {
+	ClientIDString           string
+	ClientCountry            string
+	ClientLanguage           string
+	ClientDistributionNumber uint32
+	ClientIDNumber           uint16
+	ClientMajorVersion       uint16
+	ClientMinorVersion       uint16
+	ClientLesserVersion      uint16
+	ClientBuildNumber        uint16
+	ClientMultiConn          uint8
 }

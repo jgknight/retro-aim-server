@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net"
 	"strconv"
+	"strings"
 
 	"github.com/mk6i/retro-aim-server/config"
 	"github.com/mk6i/retro-aim-server/state"
@@ -78,6 +79,7 @@ func (s AuthService) RegisterChatSession(authCookie []byte) (*state.Session, err
 
 type bosCookie struct {
 	ScreenName state.DisplayScreenName `oscar:"len_prefix=uint8"`
+	TLVList    wire.TLVList
 }
 
 // RegisterBOSSession adds a new session to the session registry.
@@ -101,16 +103,14 @@ func (s AuthService) RegisterBOSSession(authCookie []byte) (*state.Session, erro
 	}
 
 	sess := s.sessionManager.AddSession(u.DisplayScreenName)
-	// Set the unconfirmed user info flag if this account is unconfirmed
-	if confirmed, err := s.accountManager.ConfirmStatusByName(sess.IdentScreenName()); err != nil {
-		return nil, fmt.Errorf("error setting unconfirmed user flag: %w", err)
-	} else if !confirmed {
-		sess.SetUserInfoFlag(wire.OServiceUserFlagUnconfirmed)
+
+	setSessionClientSoftware(sess, c)
+	err = setSessionUserInfoFlags(sess, u, s.accountManager)
+	if err != nil {
+		return nil, err
 	}
 
 	if u.DisplayScreenName.IsUIN() {
-		sess.SetUserInfoFlag(wire.OServiceUserFlagICQ)
-
 		uin, err := strconv.Atoi(u.IdentScreenName.String())
 		if err != nil {
 			return nil, fmt.Errorf("error converting username to UIN: %w", err)
@@ -300,7 +300,7 @@ func (s AuthService) login(
 				return wire.TLVRestBlock{}, err
 			}
 
-			return s.loginSuccessResponse(sn, err)
+			return s.loginSuccessResponse(sn, TLVList, err)
 		}
 
 		loginErr := wire.LoginErrInvalidUsernameOrPassword
@@ -311,7 +311,7 @@ func (s AuthService) login(
 	}
 
 	if s.config.DisableAuth {
-		return s.loginSuccessResponse(sn, err)
+		return s.loginSuccessResponse(sn, TLVList, err)
 	}
 
 	var loginOK bool
@@ -327,12 +327,13 @@ func (s AuthService) login(
 		return loginFailureResponse(sn, wire.LoginErrInvalidPassword), nil
 	}
 
-	return s.loginSuccessResponse(sn, err)
+	return s.loginSuccessResponse(sn, TLVList, err)
 }
 
-func (s AuthService) loginSuccessResponse(screenName state.DisplayScreenName, err error) (wire.TLVRestBlock, error) {
+func (s AuthService) loginSuccessResponse(screenName state.DisplayScreenName, tlvList wire.TLVList, err error) (wire.TLVRestBlock, error) {
 	loginCookie := bosCookie{
 		ScreenName: screenName,
+		TLVList:    tlvList,
 	}
 
 	buf := &bytes.Buffer{}
@@ -360,4 +361,80 @@ func loginFailureResponse(screenName state.DisplayScreenName, code uint16) wire.
 			wire.NewTLVBE(wire.LoginTLVTagsErrorSubcode, code),
 		},
 	}
+}
+
+// setSessionClientSoftware takes any potential Client Version TLVs out of the cookie and
+// sets the values on the session.ClientSoftware struct
+func setSessionClientSoftware(sess *state.Session, c bosCookie) {
+	cs := state.ClientSoftware{}
+	if clientIDString, hasClientIDString := c.TLVList.String(wire.LoginTLVTagsClientIDString); hasClientIDString {
+		cs.ClientIDString = clientIDString
+	}
+	if clientCountry, hasClientCountry := c.TLVList.String(wire.LoginTLVTagsClientCountry); hasClientCountry {
+		cs.ClientCountry = clientCountry
+	}
+	if clientLanguage, hasClientLanguage := c.TLVList.String(wire.LoginTLVTagsClientLanguage); hasClientLanguage {
+		cs.ClientLanguage = clientLanguage
+	}
+	if clientDistNumb, hasClientDistNumb := c.TLVList.Uint32BE(wire.LoginTLVTagsClientDistributionNumber); hasClientDistNumb {
+		cs.ClientDistributionNumber = clientDistNumb
+	}
+	if clientIDNumber, hasClientIDNumber := c.TLVList.Uint16BE(wire.LoginTLVTagsClientIDNumber); hasClientIDNumber {
+		cs.ClientIDNumber = clientIDNumber
+	}
+	if clientMajorVer, hasClientMajorVer := c.TLVList.Uint16BE(wire.LoginTLVTagsClientMajorVersion); hasClientMajorVer {
+		cs.ClientMajorVersion = clientMajorVer
+	}
+	if clientMinorVer, hasClientMinorVer := c.TLVList.Uint16BE(wire.LoginTLVTagsClientMinorVersion); hasClientMinorVer {
+		cs.ClientMinorVersion = clientMinorVer
+	}
+	if clientLesserVer, hasClientLesserVer := c.TLVList.Uint16BE(wire.LoginTLVTagsClientLesserVersion); hasClientLesserVer {
+		cs.ClientLesserVersion = clientLesserVer
+	}
+	if clientBuildNumber, hasClientBuildNumber := c.TLVList.Uint16BE(wire.LoginTLVTagsClientBuildNumber); hasClientBuildNumber {
+		cs.ClientBuildNumber = clientBuildNumber
+	}
+	// if clientMultiConn, hasClientMultiConn := TLVList.Bytes(wire.LoginTLVTagsClientMultiConn); hasClientMultiConn {
+	// 	c.ClientMultiConn = clientMultiConn
+	// }
+	sess.SetClientSoftware(cs)
+}
+
+// setSessionUserInfoFlags looks at attributes about the session, user, or client and
+// sets the appropriate User Info flags on session.UserInfoFlags
+func setSessionUserInfoFlags(sess *state.Session, u *state.User, am AccountManager) error {
+	// Set the unconfirmed user info flag if this account is unconfirmed
+	if confirmed, err := am.ConfirmStatusByName(sess.IdentScreenName()); err != nil {
+		return fmt.Errorf("error setting unconfirmed user flag: %w", err)
+	} else if !confirmed {
+		sess.SetUserInfoFlag(wire.OServiceUserFlagUnconfirmed)
+	}
+
+	// Set the wireless user info flag if the user is on a known wireless device
+	// todo: determine a better way than hardcoding known devices
+	mobileClientIDStrings := []string{
+		"MX240a", // MX240a Instant Messenger (MX240a)
+		"WIN32",  // temp for testing
+	}
+	mobileClientIDNumbers := []uint16{
+		0x00,
+	}
+	for _, client := range mobileClientIDStrings {
+		if strings.Contains(sess.ClientSoftware().ClientIDString, client) {
+			sess.SetUserInfoFlag(wire.OServiceUserFlagWireless)
+			break
+		}
+	}
+	for _, client := range mobileClientIDNumbers {
+		if sess.ClientSoftware().ClientIDNumber == client {
+			sess.SetUserInfoFlag(wire.OServiceUserFlagWireless)
+			break
+		}
+	}
+
+	// Set the ICQ user info flag if the user is an ICQ user
+	if u.DisplayScreenName.IsUIN() {
+		sess.SetUserInfoFlag(wire.OServiceUserFlagICQ)
+	}
+	return nil
 }
