@@ -1498,8 +1498,12 @@ func (s OSCARProxy) SetInfo(ctx context.Context, me *state.Session, cmd []byte) 
 func (s OSCARProxy) Signon(ctx context.Context, cmd []byte) (*state.Session, []string) {
 	var userName, password string
 
-	if _, err := parseArgs(cmd, "toc_signon", nil, nil, &userName, &password); err != nil {
-		return nil, []string{s.runtimeErr(ctx, fmt.Errorf("parseArgs: %w", err))}
+	_, err := parseArgs(cmd, "toc_signon", nil, nil, &userName, &password)
+	if err != nil {
+		_, err := parseArgs(cmd, "toc2_login", nil, nil, &userName, &password)
+		if err != nil {
+			return nil, []string{s.runtimeErr(ctx, fmt.Errorf("parseArgs: %w", err))}
+		}
 	}
 
 	passwordHash, err := hex.DecodeString(password[2:])

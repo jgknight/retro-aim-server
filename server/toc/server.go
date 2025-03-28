@@ -338,15 +338,33 @@ func (rt Server) readFromClient(ctx context.Context, msgCh chan<- wire.FLAPFrame
 // initFLAP sets up a new FLAP connection. It returns a flap client if the
 // connection successfully initialized.
 func (rt Server) initFLAP(rw io.ReadWriter) (*wire.FlapClient, error) {
-	expected := "FLAPON\r\n\r\n"
-	buf := make([]byte, len(expected))
+	buf := make([]byte, len("FLAPON")+2)
 
 	_, err := io.ReadFull(rw, buf)
 	if err != nil {
 		return nil, fmt.Errorf("io.ReadFull: %w", err)
 	}
-	if expected != string(buf) {
-		return nil, fmt.Errorf("expected FLAPON, got %s", buf)
+
+	match := false
+
+	// Find clients that are using \n\n as line endings (BizTOCSock)
+	if string(buf) == "FLAPON\n\n" {
+		match = true
+	} else if string(buf) == "FLAPON\r\n" {
+		// increment the rw buffer by 2 additional bytes to see if we have
+		// the expected \r\n
+		buf2 := make([]byte, 2)
+		_, err := io.ReadFull(rw, buf2)
+		if err != nil {
+			return nil, fmt.Errorf("error when reading 2 extra bytes")
+		}
+		if string(buf2) == "\r\n" {
+			match = true
+		}
+
+	}
+	if !match {
+		return nil, fmt.Errorf("expected FLAPON, got %x", buf)
 	}
 
 	clientFlap := wire.NewFlapClient(0, rw, rw)
