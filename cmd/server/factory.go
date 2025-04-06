@@ -560,6 +560,7 @@ func TOC(deps Container) toc.Server {
 				deps.snacRateLimits,
 			),
 			ChatNavService:    foodgroup.NewChatNavService(logger, deps.sqLiteUserStore),
+			FeedbagManager:    deps.sqLiteUserStore,
 			SNACRateLimits:    deps.snacRateLimits,
 			HTTPIPRateLimiter: toc.NewIPRateLimiter(rate.Every(1*time.Minute), 10, 1*time.Minute),
 		},

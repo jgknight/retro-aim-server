@@ -4016,7 +4016,7 @@ func TestOSCARProxy_Signon(t *testing.T) {
 				Logger:            slog.Default(),
 				TOCConfigStore:    tocCfg,
 			}
-			sess, msg := svc.Signon(ctx, tc.givenCmd)
+			sess, msg := svc.Signon(ctx, tc.givenCmd, 1)
 
 			assert.Equal(t, tc.wantMsg, msg)
 			if tc.me == nil {

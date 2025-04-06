@@ -16,7 +16,7 @@ import (
 )
 
 var (
-	cmdInternalSvcErr    = "ERROR:989:internal server error"
+	cmdInternalSvcErr    = fmt.Sprintf("ERROR:%s:internal server error", wire.TOCErrorAuthUnknownError) // jgk: should this be a SubErrorCode?
 	rateLimitExceededErr = "ERROR:903"
 	errDisconnect        = errors.New("got booted by another session")
 )
@@ -41,6 +41,11 @@ func (s OSCARProxy) RecvBOS(ctx context.Context, me *state.Session, chatRegistry
 				sendOrCancel(ctx, ch, s.IMIn(ctx, chatRegistry, v))
 			case wire.SNAC_0x01_0x10_OServiceEvilNotification:
 				sendOrCancel(ctx, ch, s.Eviled(v))
+			case wire.SNAC_0x04_0x14_ICBMClientEvent:
+				if me.TocVersion() == 2 {
+					sendOrCancel(ctx, ch, s.ClientEvent(v))
+				}
+
 			default:
 				s.Logger.DebugContext(ctx, fmt.Sprintf("unsupported snac. foodgroup: %s subgroup: %s",
 					wire.FoodGroupName(snac.Frame.FoodGroup),
@@ -330,6 +335,24 @@ func (s OSCARProxy) UpdateBuddyArrival(snac wire.SNAC_0x03_0x0B_BuddyArrived) st
 // Command syntax: UPDATE_BUDDY:<Buddy User>:<Online? T/F>:<Evil Amount>:<Signon Time>:<IdleTime>:<UC>
 func (s OSCARProxy) UpdateBuddyDeparted(snac wire.SNAC_0x03_0x0C_BuddyDeparted) string {
 	return fmt.Sprintf("UPDATE_BUDDY:%s:F:0:0:0:   ", snac.ScreenName)
+}
+
+// ClientEvent handles the CLIENT_EVENT2 TOC2 command.
+//
+// From BizTOCSock documentation:
+//
+//	I discovered this a while ago, but this is the typing status of a user in IMs, much
+//  like what AIM does. It is only sent while you're currently being IMed by someone.
+//  There are only three codes as I know of, but I believe there is one for "User is
+//  recording..." If it were one, it would probably be code 3.
+
+//	0 = User is doing nothing
+//	1 = User has enterted Text
+//	2 = User is currently typing
+//
+// Command syntax: CLIENT_EVENT2:<Buddy User>:<Typing Status>
+func (s OSCARProxy) ClientEvent(snac wire.SNAC_0x04_0x14_ICBMClientEvent) string {
+	return fmt.Sprintf("CLIENT_EVENT2:%s:%d", snac.ScreenName, snac.Event)
 }
 
 func sendOrCancel(ctx context.Context, ch chan<- []byte, msg string) {

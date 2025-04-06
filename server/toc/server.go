@@ -395,32 +395,38 @@ func (rt Server) login(ctx context.Context, clientFlap *wire.FlapClient) (*state
 	if idx := bytes.IndexByte(clientFrame.Payload, ' '); idx > -1 {
 		cmd, args = clientFrame.Payload[:idx], clientFrame.Payload[idx:]
 	}
-	if string(cmd) != "toc_signon" {
-		return nil, errors.New("expected toc_signon")
+	var tocVersion int
+	if string(cmd) == "toc_signon" {
+		tocVersion = 1
+	} else if string(cmd) == "toc2_login" {
+		tocVersion = 2
+	} else {
+		return nil, errors.New("expected toc_signon or toc2_login")
 	}
 
-	sessBOS, reply := rt.BOSProxy.Signon(ctx, args)
+	sessBOS, reply := rt.BOSProxy.Signon(ctx, args, tocVersion)
+	sessBOS.SetTocVersion(tocVersion)
 	for _, m := range reply {
 		if err := clientFlap.SendDataFrame([]byte(m)); err != nil {
 			return nil, fmt.Errorf("clientFlap.SendDataFrame: %w", err)
 		}
 	}
-
 	return sessBOS, nil
 }
 
 // initFLAP sets up a new FLAP connection. It returns a flap client if the
 // connection successfully initialized.
 func (rt Server) initFLAP(rw io.ReadWriter) (*wire.FlapClient, error) {
-	expected := "FLAPON\r\n\r\n"
-	buf := make([]byte, len(expected))
+	buf := make([]byte, 10)
 
-	_, err := io.ReadFull(rw, buf)
+	count, err := rw.Read(buf)
 	if err != nil {
-		return nil, fmt.Errorf("io.ReadFull: %w", err)
+		return nil, fmt.Errorf("rw.Read: %w", err)
 	}
-	if expected != string(buf) {
-		return nil, fmt.Errorf("expected FLAPON, got %s", buf)
+
+	header := string(buf[:count])
+	if !(header == "FLAPON\n\n" || header == "FLAPON\r\n\r\n") {
+		return nil, fmt.Errorf("expected FLAPON, got %X", buf)
 	}
 
 	clientFlap := wire.NewFlapClient(0, rw, rw)

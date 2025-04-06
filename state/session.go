@@ -69,6 +69,7 @@ type Session struct {
 	userStatusBitmask   uint32
 	clientID            string
 	remoteAddr          *netip.AddrPort
+	tocVersion          int
 	lastObservedStates  [5]RateClassState
 	rateByClassID       [5]RateClassState
 	foodGroupVersions   [wire.MDir + 1]uint16
@@ -140,6 +141,20 @@ func (s *Session) SetRateClasses(now time.Time, classes wire.RateLimitClasses) {
 	}
 
 	s.rateByClassID = newStates
+}
+
+// SetTocVersion sets the session TOC version
+func (s *Session) SetTocVersion(tocVersion int) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+	s.tocVersion = tocVersion
+}
+
+// TocVersion returns session TOC version
+func (s *Session) TocVersion() (tocVersion int) {
+	s.mutex.RLock()
+	defer s.mutex.RUnlock()
+	return s.tocVersion
 }
 
 // SetRemoteAddr sets the user's remote IP address

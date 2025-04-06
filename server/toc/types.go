@@ -87,6 +87,11 @@ type TOCConfigStore interface {
 	User(ctx context.Context, screenName state.IdentScreenName) (*state.User, error)
 }
 
+type FeedbagManager interface {
+	// Feedbag fetches the contents of a user's feedbag for CONFIG2
+	Feedbag(ctx context.Context, screenName state.IdentScreenName) ([]wire.FeedbagItem, error)
+}
+
 // CookieBaker defines methods for issuing and verifying AIM authentication tokens ("cookies").
 // These tokens are used for authenticating client sessions with AIM services.
 type CookieBaker interface {

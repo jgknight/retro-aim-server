@@ -129,6 +129,7 @@ type OSCARProxy struct {
 	OServiceServiceChat OServiceService
 	PermitDenyService   PermitDenyService
 	TOCConfigStore      TOCConfigStore
+	FeedbagManager      FeedbagManager
 	SNACRateLimits      wire.SNACRateLimits
 	HTTPIPRateLimiter   *IPRateLimiter
 }
@@ -382,11 +383,11 @@ func (s OSCARProxy) ChangePassword(ctx context.Context, me *state.Session, args 
 	if ok {
 		switch code {
 		case wire.AdminInfoErrorInvalidPasswordLength:
-			return "ERROR:911"
+			return "ERROR:" + wire.TOCErrorAdminInvalidInput
 		case wire.AdminInfoErrorValidatePassword:
-			return "ERROR:912"
+			return "ERROR:" + wire.TOCErrorAdminInvalidAccount // jgk: is this correct error code?
 		default:
-			return "ERROR:913"
+			return "ERROR:" + wire.TOCErrorAdminProcessingRequest
 		}
 	}
 
@@ -874,6 +875,8 @@ func (s OSCARProxy) ChatWhisper(ctx context.Context, chatRegistry *ChatRegistry,
 //	people who have recently sent you ims. The higher someones evil level, the
 //	slower they can send message.
 //
+// An ERROR message will be sent back to the client if the warning was unsuccessful.
+//
 // Command syntax: toc_evil <User> <norm|anon>
 func (s OSCARProxy) Evil(ctx context.Context, me *state.Session, args []byte) string {
 	if errMsg, isLimited := s.checkRateLimit(ctx, me, wire.ICBM, wire.ICBMEvilRequest); isLimited {
@@ -909,11 +912,10 @@ func (s OSCARProxy) Evil(ctx context.Context, me *state.Session, args []byte) st
 		return ""
 	case wire.SNACError:
 		s.Logger.InfoContext(ctx, "unable to warn user", "code", v.Code)
+		return "ERROR:" + wire.TOCErrorGeneralWarningUserNotAvailable
 	default:
 		return s.runtimeErr(ctx, errors.New("unexpected response"))
 	}
-
-	return ""
 }
 
 // FormatNickname handles the toc_format_nickname TOC command.
@@ -924,6 +926,7 @@ func (s OSCARProxy) Evil(ctx context.Context, me *state.Session, args []byte) st
 //	sent back to the client.
 //
 // Command syntax: toc_format_nickname <new_format>
+// jgk: also need to send NICK:formatted nick
 func (s OSCARProxy) FormatNickname(ctx context.Context, me *state.Session, args []byte) string {
 	if errMsg, isLimited := s.checkRateLimit(ctx, me, wire.Admin, wire.AdminInfoChangeRequest); isLimited {
 		return errMsg
@@ -960,9 +963,9 @@ func (s OSCARProxy) FormatNickname(ctx context.Context, me *state.Session, args 
 	if ok {
 		switch code {
 		case wire.AdminInfoErrorInvalidNickNameLength, wire.AdminInfoErrorInvalidNickName:
-			return "ERROR:911"
+			return "ERROR:" + wire.TOCErrorAdminInvalidInput
 		default:
-			return "ERROR:913"
+			return "ERROR:" + wire.TOCErrorAdminProcessingRequest
 		}
 	}
 
@@ -1129,7 +1132,7 @@ func (s OSCARProxy) GetStatus(ctx context.Context, me *state.Session, args []byt
 	switch v := info.Body.(type) {
 	case wire.SNACError:
 		if v.Code == wire.ErrorCodeNotLoggedOn {
-			return fmt.Sprintf("ERROR:901:%s", them)
+			return fmt.Sprintf("ERROR:%s:%s", wire.TOCErrorGeneralUserNotAvailable, them)
 		} else {
 			return s.runtimeErr(ctx, fmt.Errorf("LocateService.UserInfoQuery error code: %d", v.Code))
 		}
@@ -1630,7 +1633,7 @@ func (s OSCARProxy) SetInfo(ctx context.Context, me *state.Session, args []byte)
 	return ""
 }
 
-// Signon handles the toc_signon TOC command.
+// Signon handles the toc_signon and toc2_login TOC commands.
 //
 // From the TiK documentation:
 //
@@ -1652,7 +1655,9 @@ func (s OSCARProxy) SetInfo(ctx context.Context, me *state.Session, args []byte)
 //	The Roasting String is Tic/Toc.
 //
 // Command syntax: toc_signon <authorizer host> <authorizer port> <User Name> <Password> <language> <version>
-func (s OSCARProxy) Signon(ctx context.Context, args []byte) (*state.Session, []string) {
+//
+// Command syntax: toc2_login <authorizer host> <authorizer port> <User Name> <Password> <language> <version> <unknown> <code>
+func (s OSCARProxy) Signon(ctx context.Context, args []byte, tocVersion int) (*state.Session, []string) {
 	var userName, password string
 
 	if _, err := parseArgs(args, nil, nil, &userName, &password); err != nil {
@@ -1675,7 +1680,7 @@ func (s OSCARProxy) Signon(ctx context.Context, args []byte) (*state.Session, []
 
 	if block.HasTag(wire.LoginTLVTagsErrorSubcode) {
 		s.Logger.DebugContext(ctx, "login failed")
-		return nil, []string{"ERROR:980"} // bad username/password
+		return nil, []string{"ERROR:" + wire.TOCErrorAuthIncorrectNickOrPassword}
 	}
 
 	authCookie, ok := block.Bytes(wire.OServiceTLVTagsLoginCookie)
@@ -1703,7 +1708,63 @@ func (s OSCARProxy) Signon(ctx context.Context, args []byte) (*state.Session, []
 		return nil, []string{s.runtimeErr(ctx, fmt.Errorf("TOCConfigStore.User: user not found"))}
 	}
 
-	return sess, []string{"SIGN_ON:TOC1.0", fmt.Sprintf("CONFIG:%s", u.TOCConfig)}
+	if tocVersion == 1 {
+		return sess, []string{"SIGN_ON:TOC1.0", fmt.Sprintf("CONFIG:%s", u.TOCConfig), fmt.Sprintf("NICK:%s", sess.DisplayScreenName().String())}
+	}
+
+	// pref:1835295\n
+	// 25:RecentUser:#\n (random or inc number?)
+	// need to split u.TOCConfig up so it doesn't exceed max pkt size of 8k. not implemented yet
+
+	// In TOC2.0, the TOCConfig is "automatically" saved. That is, the client doesn't need to send toc_set_config
+	fb, err := s.FeedbagManager.Feedbag(ctx, sess.IdentScreenName())
+	if err != nil {
+		return nil, []string{s.runtimeErr(ctx, fmt.Errorf("FeedbagManager.Feedbag: %w", err))}
+	}
+	TOC2Config := ""
+	groupNames := make(map[uint16]string)
+	groupMembers := make(map[uint16][]wire.FeedbagItem)
+
+	if len(fb) > 0 {
+		for _, b := range fb {
+			if b.ClassID == wire.FeedbagClassIdGroup {
+				groupNames[b.GroupID] = b.Name
+			}
+			if b.ClassID == wire.FeedbagClassIdBuddy {
+				groupMembers[b.GroupID] = append(groupMembers[b.GroupID], b)
+			}
+			if b.ClassID == wire.FeedbagClassIDDeny {
+				TOC2Config += "d:" + b.Name + "\n"
+			}
+			if b.ClassID == wire.FeedbagClassIDPermit {
+				TOC2Config += "p:" + b.Name + "\n"
+			}
+			// if b.ClassID == wire.FeedbagClassIdPdinfo {
+			// 	// store this as "m:"
+			// 	TOC2Config += "m:" + b.Name + "\n"
+			// }
+
+			//fmt.Printf("\n\nclassID:%x\nname: %s (%x)\ngroupID: %x\nitemid: %x\n", b.ClassID, b.Name, b.Name, b.GroupID, b.ItemID)
+		}
+		for id, name := range groupNames {
+			TOC2Config += "g:" + name + "\n"
+			for _, member := range groupMembers[id] {
+				TOC2Config += "b:" + member.Name
+				for _, tlv := range member.TLVLBlock.TLVList {
+					if tlv.Tag == wire.FeedbagAttributesNote {
+						TOC2Config += ":::::" + string(tlv.Value)
+						break
+					}
+				}
+
+				TOC2Config += "\n"
+			}
+		}
+
+		fmt.Println("building CONFIG2:\n\n" + TOC2Config + "\n\n")
+	}
+	return sess, []string{"SIGN_ON:TOC2.0", fmt.Sprintf("CONFIG2:%sdone:\n", TOC2Config), fmt.Sprintf("NICK:%s", sess.DisplayScreenName().String())}
+
 }
 
 // Signout terminates a TOC session. It sends departure notifications to
