@@ -294,7 +294,7 @@ func (rt Server) handleTOCRequest(
 	clientFlap *wire.FlapClient,
 ) error {
 	// TOC response queue
-	msgCh := make(chan []byte, 1)
+	msgCh := make(chan []string, 1)
 
 	g, ctx := errgroup.WithContext(ctx)
 
@@ -321,7 +321,7 @@ func (rt Server) handleTOCRequest(
 	return g.Wait()
 }
 
-func (rt Server) runClientCommands(ctx context.Context, doAsync func(f func() error), sessBOS *state.Session, chatRegistry *ChatRegistry, clientFlap *wire.FlapClient, toCh chan<- []byte) error {
+func (rt Server) runClientCommands(ctx context.Context, doAsync func(f func() error), sessBOS *state.Session, chatRegistry *ChatRegistry, clientFlap *wire.FlapClient, toCh chan<- []string) error {
 	for {
 		clientFrame, err := clientFlap.ReceiveFLAP()
 		if err != nil {
@@ -344,9 +344,12 @@ func (rt Server) runClientCommands(ctx context.Context, doAsync func(f func() er
 			}
 
 			msg := rt.BOSProxy.RecvClientCmd(ctx, sessBOS, chatRegistry, clientFrame.Payload, toCh, doAsync)
-			if len(msg) > 0 {
+			// jgk: checking for empty string in slice. This works because for now we will never
+			// send more than one response if element 0 is empty.
+			// should i be iterating all elements and filering out empty strings instead?
+			if len(msg) > 0 && len(msg[0]) > 0 {
 				select {
-				case toCh <- []byte(msg):
+				case toCh <- msg:
 				case <-ctx.Done():
 					return nil
 				}
@@ -357,24 +360,27 @@ func (rt Server) runClientCommands(ctx context.Context, doAsync func(f func() er
 	}
 }
 
-func (rt Server) sendToClient(ctx context.Context, toClient <-chan []byte, clientFlap *wire.FlapClient) error {
+func (rt Server) sendToClient(ctx context.Context, toClient <-chan []string, clientFlap *wire.FlapClient) error {
 	for {
 		select {
 		case <-ctx.Done():
 			return nil
-		case msg := <-toClient:
-			if err := clientFlap.SendDataFrame(msg); err != nil {
-				return fmt.Errorf("clientFlap.SendDataFrame: %w", err)
-			}
-			if rt.Logger.Enabled(ctx, slog.LevelDebug) {
-				rt.Logger.DebugContext(ctx, "server response", "command", msg)
-			} else {
-				// just log the command, omit params
-				idx := len(msg)
-				if col := bytes.IndexByte(msg, ':'); col > -1 {
-					idx = col
+		case msgs := <-toClient:
+			for _, m := range msgs {
+				if err := clientFlap.SendDataFrame([]byte(m)); err != nil {
+					return fmt.Errorf("clientFlap.SendDataFrame: %w", err)
 				}
-				rt.Logger.InfoContext(ctx, "server response", "command", msg[0:idx])
+				// jgk: need to clean up, server response debug doesn't work?
+				if rt.Logger.Enabled(ctx, slog.LevelDebug) {
+					rt.Logger.DebugContext(ctx, "server response", "command", m)
+				} else {
+					// just log the command, omit params
+					idx := len(m)
+					if col := bytes.IndexByte([]byte(m), ':'); col > -1 {
+						idx = col
+					}
+					rt.Logger.InfoContext(ctx, "server response", "command", m[0:idx])
+				}
 			}
 		}
 	}

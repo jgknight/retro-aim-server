@@ -24,7 +24,7 @@ var (
 // RecvBOS routes incoming SNAC messages from the BOS server to their
 // corresponding TOC handlers. It ignores any SNAC messages for which there is
 // no TOC response.
-func (s OSCARProxy) RecvBOS(ctx context.Context, me *state.Session, chatRegistry *ChatRegistry, ch chan<- []byte) error {
+func (s OSCARProxy) RecvBOS(ctx context.Context, me *state.Session, chatRegistry *ChatRegistry, ch chan<- []string) error {
 	for {
 		select {
 		case <-ctx.Done():
@@ -58,7 +58,7 @@ func (s OSCARProxy) RecvBOS(ctx context.Context, me *state.Session, chatRegistry
 // RecvChat routes incoming SNAC messages from the chat server to their
 // corresponding TOC handlers. It ignores any SNAC messages for which there is
 // no TOC response.
-func (s OSCARProxy) RecvChat(ctx context.Context, me *state.Session, chatID int, ch chan<- []byte) {
+func (s OSCARProxy) RecvChat(ctx context.Context, me *state.Session, chatID int, ch chan<- []string) {
 	for {
 		select {
 		case <-ctx.Done():
@@ -89,7 +89,7 @@ func (s OSCARProxy) RecvChat(ctx context.Context, me *state.Session, chatID int,
 //	A chat message was sent in a chat room.
 //
 // Command syntax: CHAT_IN:<Chat Room Id>:<Source User>:<Whisper? T/F>:<Message>
-func (s OSCARProxy) ChatIn(ctx context.Context, snac wire.SNAC_0x0E_0x06_ChatChannelMsgToClient, chatID int) string {
+func (s OSCARProxy) ChatIn(ctx context.Context, snac wire.SNAC_0x0E_0x06_ChatChannelMsgToClient, chatID int) []string {
 	b, ok := snac.Bytes(wire.ChatTLVSenderInformation)
 	if !ok {
 		return s.runtimeErr(ctx, errors.New("snac.Bytes: missing wire.ChatTLVSenderInformation"))
@@ -111,7 +111,7 @@ func (s OSCARProxy) ChatIn(ctx context.Context, snac wire.SNAC_0x0E_0x06_ChatCha
 		return s.runtimeErr(ctx, fmt.Errorf("wire.UnmarshalChatMessageText: %w", err))
 	}
 
-	return fmt.Sprintf("CHAT_IN:%d:%s:F:%s", chatID, u.ScreenName, text)
+	return []string{fmt.Sprintf("CHAT_IN:%d:%s:F:%s", chatID, u.ScreenName, text)}
 }
 
 // ChatUpdateBuddyArrived handles the CHAT_UPDATE_BUDDY TOC command for chat
@@ -124,12 +124,12 @@ func (s OSCARProxy) ChatIn(ctx context.Context, snac wire.SNAC_0x0E_0x06_ChatCha
 //	room.
 //
 // Command syntax: CHAT_UPDATE_BUDDY:<Chat Room Id>:<Inside? T/F>:<User 1>:<User 2>...
-func (s OSCARProxy) ChatUpdateBuddyArrived(snac wire.SNAC_0x0E_0x03_ChatUsersJoined, chatID int) string {
+func (s OSCARProxy) ChatUpdateBuddyArrived(snac wire.SNAC_0x0E_0x03_ChatUsersJoined, chatID int) []string {
 	users := make([]string, 0, len(snac.Users))
 	for _, u := range snac.Users {
 		users = append(users, u.ScreenName)
 	}
-	return fmt.Sprintf("CHAT_UPDATE_BUDDY:%d:T:%s", chatID, strings.Join(users, ":"))
+	return []string{fmt.Sprintf("CHAT_UPDATE_BUDDY:%d:T:%s", chatID, strings.Join(users, ":"))}
 }
 
 // ChatUpdateBuddyLeft handles the CHAT_UPDATE_BUDDY TOC command for chat
@@ -142,12 +142,12 @@ func (s OSCARProxy) ChatUpdateBuddyArrived(snac wire.SNAC_0x0E_0x03_ChatUsersJoi
 //	room.
 //
 // Command syntax: CHAT_UPDATE_BUDDY:<Chat Room Id>:<Inside? T/F>:<User 1>:<User 2>...
-func (s OSCARProxy) ChatUpdateBuddyLeft(snac wire.SNAC_0x0E_0x04_ChatUsersLeft, chatID int) string {
+func (s OSCARProxy) ChatUpdateBuddyLeft(snac wire.SNAC_0x0E_0x04_ChatUsersLeft, chatID int) []string {
 	users := make([]string, 0, len(snac.Users))
 	for _, u := range snac.Users {
 		users = append(users, u.ScreenName)
 	}
-	return fmt.Sprintf("CHAT_UPDATE_BUDDY:%d:F:%s", chatID, strings.Join(users, ":"))
+	return []string{fmt.Sprintf("CHAT_UPDATE_BUDDY:%d:F:%s", chatID, strings.Join(users, ":"))}
 }
 
 // Eviled handles the EVILED TOC command.
@@ -157,13 +157,13 @@ func (s OSCARProxy) ChatUpdateBuddyLeft(snac wire.SNAC_0x0E_0x04_ChatUsersLeft, 
 //	The user was just eviled.
 //
 // Command syntax: EVILED:<new evil>:<name of eviler, blank if anonymous>
-func (s OSCARProxy) Eviled(snac wire.SNAC_0x01_0x10_OServiceEvilNotification) string {
+func (s OSCARProxy) Eviled(snac wire.SNAC_0x01_0x10_OServiceEvilNotification) []string {
 	warning := fmt.Sprintf("%d", snac.NewEvil/10)
 	who := ""
 	if snac.Snitcher != nil {
 		who = snac.Snitcher.ScreenName
 	}
-	return fmt.Sprintf("EVILED:%s:%s", warning, who)
+	return []string{fmt.Sprintf("EVILED:%s:%s", warning, who)}
 }
 
 // IMIn handles the IM_IN TOC command.
@@ -174,15 +174,15 @@ func (s OSCARProxy) Eviled(snac wire.SNAC_0x01_0x10_OServiceEvilNotification) st
 //	incoming message, including other colons.
 //
 // Command syntax: IM_IN:<Source User>:<Auto Response T/F?>:<Message>
-func (s OSCARProxy) IMIn(ctx context.Context, chatRegistry *ChatRegistry, snac wire.SNAC_0x04_0x07_ICBMChannelMsgToClient) string {
+func (s OSCARProxy) IMIn(ctx context.Context, chatRegistry *ChatRegistry, snac wire.SNAC_0x04_0x07_ICBMChannelMsgToClient) []string {
 	switch snac.ChannelID {
 	case wire.ICBMChannelIM:
-		return s.convertICBMInstantMsg(ctx, snac)
+		return []string{s.convertICBMInstantMsg(ctx, snac)}
 	case wire.ICBMChannelRendezvous:
-		return s.convertICBMRendezvous(ctx, chatRegistry, snac)
+		return []string{s.convertICBMRendezvous(ctx, chatRegistry, snac)}
 	default:
 		s.Logger.DebugContext(ctx, "received unsupported ICBM channel message", "channel_id", snac.ChannelID)
-		return ""
+		return []string{""}
 	}
 }
 
@@ -190,11 +190,11 @@ func (s OSCARProxy) IMIn(ctx context.Context, chatRegistry *ChatRegistry, snac w
 func (s OSCARProxy) convertICBMInstantMsg(ctx context.Context, snac wire.SNAC_0x04_0x07_ICBMChannelMsgToClient) string {
 	buf, ok := snac.TLVRestBlock.Bytes(wire.ICBMTLVAOLIMData)
 	if !ok {
-		return s.runtimeErr(ctx, errors.New("TLVRestBlock.Bytes: missing wire.ICBMTLVAOLIMData"))
+		return s.runtimeErr(ctx, errors.New("TLVRestBlock.Bytes: missing wire.ICBMTLVAOLIMData"))[0]
 	}
 	txt, err := wire.UnmarshalICBMMessageText(buf)
 	if err != nil {
-		return s.runtimeErr(ctx, fmt.Errorf("wire.UnmarshalICBMMessageText: %w", err))
+		return s.runtimeErr(ctx, fmt.Errorf("wire.UnmarshalICBMMessageText: %w", err))[0]
 	}
 
 	autoResp := "F"
@@ -212,11 +212,11 @@ func (s OSCARProxy) convertICBMInstantMsg(ctx context.Context, snac wire.SNAC_0x
 func (s OSCARProxy) convertICBMRendezvous(ctx context.Context, chatRegistry *ChatRegistry, snac wire.SNAC_0x04_0x07_ICBMChannelMsgToClient) string {
 	rdinfo, has := snac.TLVRestBlock.Bytes(wire.ICBMTLVData)
 	if !has {
-		return s.runtimeErr(ctx, errors.New("TLVRestBlock.Bytes: missing rendezvous block"))
+		return s.runtimeErr(ctx, errors.New("TLVRestBlock.Bytes: missing rendezvous block"))[0]
 	}
 	frag := wire.ICBMCh2Fragment{}
 	if err := wire.UnmarshalBE(&frag, bytes.NewReader(rdinfo)); err != nil {
-		return s.runtimeErr(ctx, fmt.Errorf("wire.UnmarshalBE: %w", err))
+		return s.runtimeErr(ctx, fmt.Errorf("wire.UnmarshalBE: %w", err))[0]
 	}
 
 	if frag.Type != wire.ICBMRdvMessagePropose {
@@ -228,22 +228,22 @@ func (s OSCARProxy) convertICBMRendezvous(ctx context.Context, chatRegistry *Cha
 	case wire.CapChat:
 		prompt, ok := frag.Bytes(wire.ICBMRdvTLVTagsInvitation)
 		if !ok {
-			return s.runtimeErr(ctx, errors.New("frag.Bytes: missing chat invite prompt"))
+			return s.runtimeErr(ctx, errors.New("frag.Bytes: missing chat invite prompt"))[0]
 		}
 
 		svcData, ok := frag.Bytes(wire.ICBMRdvTLVTagsSvcData)
 		if !ok || svcData == nil {
-			return s.runtimeErr(ctx, errors.New("frag.Bytes: missing room info"))
+			return s.runtimeErr(ctx, errors.New("frag.Bytes: missing room info"))[0]
 		}
 
 		roomInfo := wire.ICBMRoomInfo{}
 		if err := wire.UnmarshalBE(&roomInfo, bytes.NewReader(svcData)); err != nil {
-			return s.runtimeErr(ctx, fmt.Errorf("wire.UnmarshalBE: %w", err))
+			return s.runtimeErr(ctx, fmt.Errorf("wire.UnmarshalBE: %w", err))[0]
 		}
 
 		cookie := strings.Split(roomInfo.Cookie, "-") // make this safe
 		if len(cookie) < 3 {
-			return s.runtimeErr(ctx, errors.New("roomInfo.Cookie: malformed cookie, could not get room name"))
+			return s.runtimeErr(ctx, errors.New("roomInfo.Cookie: malformed cookie, could not get room name"))[0]
 		}
 
 		roomName := cookie[2]
@@ -308,8 +308,8 @@ func (s OSCARProxy) convertICBMRendezvous(ctx context.Context, chatRegistry *Cha
 //			- 'U' - The user has set their unavailable flag.
 //
 // Command syntax: UPDATE_BUDDY:<Buddy User>:<Online? T/F>:<Evil Amount>:<Signon Time>:<IdleTime>:<UC>
-func (s OSCARProxy) UpdateBuddyArrival(snac wire.SNAC_0x03_0x0B_BuddyArrived) string {
-	return userInfoToUpdateBuddy(snac.TLVUserInfo)
+func (s OSCARProxy) UpdateBuddyArrival(snac wire.SNAC_0x03_0x0B_BuddyArrived) []string {
+	return []string{userInfoToUpdateBuddy(snac.TLVUserInfo)}
 }
 
 // UpdateBuddyDeparted handles the UPDATE_BUDDY TOC command for buddy departure events.
@@ -333,8 +333,8 @@ func (s OSCARProxy) UpdateBuddyArrival(snac wire.SNAC_0x03_0x0B_BuddyArrived) st
 //			- 'U' - The user has set their unavailable flag.
 //
 // Command syntax: UPDATE_BUDDY:<Buddy User>:<Online? T/F>:<Evil Amount>:<Signon Time>:<IdleTime>:<UC>
-func (s OSCARProxy) UpdateBuddyDeparted(snac wire.SNAC_0x03_0x0C_BuddyDeparted) string {
-	return fmt.Sprintf("UPDATE_BUDDY:%s:F:0:0:0:   ", snac.ScreenName)
+func (s OSCARProxy) UpdateBuddyDeparted(snac wire.SNAC_0x03_0x0C_BuddyDeparted) []string {
+	return []string{fmt.Sprintf("UPDATE_BUDDY:%s:F:0:0:0:   ", snac.ScreenName)}
 }
 
 // ClientEvent handles the CLIENT_EVENT2 TOC2 command.
@@ -351,15 +351,15 @@ func (s OSCARProxy) UpdateBuddyDeparted(snac wire.SNAC_0x03_0x0C_BuddyDeparted) 
 //	2 = User is currently typing
 //
 // Command syntax: CLIENT_EVENT2:<Buddy User>:<Typing Status>
-func (s OSCARProxy) ClientEvent(snac wire.SNAC_0x04_0x14_ICBMClientEvent) string {
-	return fmt.Sprintf("CLIENT_EVENT2:%s:%d", snac.ScreenName, snac.Event)
+func (s OSCARProxy) ClientEvent(snac wire.SNAC_0x04_0x14_ICBMClientEvent) []string {
+	return []string{fmt.Sprintf("CLIENT_EVENT2:%s:%d", snac.ScreenName, snac.Event)}
 }
 
-func sendOrCancel(ctx context.Context, ch chan<- []byte, msg string) {
+func sendOrCancel(ctx context.Context, ch chan<- []string, msg []string) {
 	select {
 	case <-ctx.Done():
 		return
-	case ch <- []byte(msg):
+	case ch <- msg:
 		return
 	}
 }

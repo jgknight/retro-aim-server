@@ -25,7 +25,7 @@ func TestOSCARProxy_RecvClientCmd_AddBuddy(t *testing.T) {
 		// givenCmd is the TOC command
 		givenCmd []byte
 		// wantMsg is the expected TOC response
-		wantMsg string
+		wantMsg []string
 		// mockParams is the list of params sent to mocks that satisfy this
 		// method's dependencies
 		mockParams mockParams
@@ -89,7 +89,7 @@ func TestOSCARProxy_RecvClientCmd_AddBuddy(t *testing.T) {
 					},
 				},
 			},
-			wantMsg: cmdInternalSvcErr,
+			wantMsg: []string{cmdInternalSvcErr},
 		},
 	}
 
@@ -124,7 +124,7 @@ func TestOSCARProxy_RecvClientCmd_AddPermit(t *testing.T) {
 		// givenCmd is the TOC command
 		givenCmd []byte
 		// wantMsg is the expected TOC response
-		wantMsg string
+		wantMsg []string
 		// mockParams is the list of params sent to mocks that satisfy this
 		// method's dependencies
 		mockParams mockParams
@@ -173,7 +173,7 @@ func TestOSCARProxy_RecvClientCmd_AddPermit(t *testing.T) {
 					},
 				},
 			},
-			wantMsg: cmdInternalSvcErr,
+			wantMsg: []string{cmdInternalSvcErr},
 		},
 		{
 			name:     "permit buddies with empty list",
@@ -223,7 +223,7 @@ func TestOSCARProxy_RecvClientCmd_AddDeny(t *testing.T) {
 		// givenCmd is the TOC command
 		givenCmd []byte
 		// wantMsg is the expected TOC response
-		wantMsg string
+		wantMsg []string
 		// mockParams is the list of params sent to mocks that satisfy this
 		// method's dependencies
 		mockParams mockParams
@@ -272,7 +272,7 @@ func TestOSCARProxy_RecvClientCmd_AddDeny(t *testing.T) {
 					},
 				},
 			},
-			wantMsg: cmdInternalSvcErr,
+			wantMsg: []string{cmdInternalSvcErr},
 		},
 		{
 			name:     "deny buddies with empty list",
@@ -322,7 +322,7 @@ func TestOSCARProxy_RecvClientCmd_FormatNickname(t *testing.T) {
 		// givenCmd is the TOC command
 		givenCmd []byte
 		// wantMsg is the expected TOC response
-		wantMsg string
+		wantMsg []string
 		// mockParams is the list of params sent to mocks that satisfy this
 		// method's dependencies
 		mockParams mockParams
@@ -357,7 +357,7 @@ func TestOSCARProxy_RecvClientCmd_FormatNickname(t *testing.T) {
 					},
 				},
 			},
-			wantMsg: "ADMIN_NICK_STATUS:0",
+			wantMsg: []string{"ADMIN_NICK_STATUS:0", "NICK:mYsCrEeNnAmE"},
 		},
 		{
 			name:     "format nickname - invalid length",
@@ -390,7 +390,7 @@ func TestOSCARProxy_RecvClientCmd_FormatNickname(t *testing.T) {
 					},
 				},
 			},
-			wantMsg: "ERROR:911",
+			wantMsg: []string{"ERROR:911"},
 		},
 		{
 			name:     "format nickname - invalid screen name",
@@ -423,7 +423,7 @@ func TestOSCARProxy_RecvClientCmd_FormatNickname(t *testing.T) {
 					},
 				},
 			},
-			wantMsg: "ERROR:911",
+			wantMsg: []string{"ERROR:911"},
 		},
 		{
 			name:     "format nickname - catch-all error",
@@ -456,7 +456,7 @@ func TestOSCARProxy_RecvClientCmd_FormatNickname(t *testing.T) {
 					},
 				},
 			},
-			wantMsg: "ERROR:913",
+			wantMsg: []string{"ERROR:913"},
 		},
 		{
 			name:     "format nickname - runtime error from admin svc",
@@ -479,7 +479,7 @@ func TestOSCARProxy_RecvClientCmd_FormatNickname(t *testing.T) {
 					},
 				},
 			},
-			wantMsg: cmdInternalSvcErr,
+			wantMsg: []string{cmdInternalSvcErr},
 		},
 		{
 			name:     "change password - unexpected response from admin svc",
@@ -504,13 +504,13 @@ func TestOSCARProxy_RecvClientCmd_FormatNickname(t *testing.T) {
 					},
 				},
 			},
-			wantMsg: cmdInternalSvcErr,
+			wantMsg: []string{cmdInternalSvcErr},
 		},
 		{
 			name:     "bad command",
 			me:       newTestSession("me"),
 			givenCmd: []byte(`toc_format_nickname`),
-			wantMsg:  cmdInternalSvcErr,
+			wantMsg:  []string{cmdInternalSvcErr},
 		},
 	}
 
@@ -647,7 +647,7 @@ func TestOSCARProxy_RecvClientCmd_ChatAccept(t *testing.T) {
 		// givenChatRegistry is the chat registry passed to the function
 		givenChatRegistry *ChatRegistry
 		// wantMsg is the expected TOC response
-		wantMsg string
+		wantMsg []string
 		// expectChatSession indicates whether a chat session should be present
 		// in the chat registry
 		expectChatSession bool
@@ -674,7 +674,7 @@ func TestOSCARProxy_RecvClientCmd_ChatAccept(t *testing.T) {
 				authParams:         fnNewAuthParams(nil),
 				oServiceChatParams: fnNewOServiceChatParams(nil),
 			},
-			wantMsg:           "CHAT_JOIN:0:cool room",
+			wantMsg:           []string{"CHAT_JOIN:0:cool room"},
 			expectChatSession: true,
 		},
 		{
@@ -696,7 +696,7 @@ func TestOSCARProxy_RecvClientCmd_ChatAccept(t *testing.T) {
 				authParams:         fnNewAuthParams(nil),
 				oServiceChatParams: fnNewOServiceChatParams(io.EOF),
 			},
-			wantMsg:           cmdInternalSvcErr,
+			wantMsg:           []string{cmdInternalSvcErr},
 			expectChatSession: false,
 		},
 		{
@@ -717,7 +717,7 @@ func TestOSCARProxy_RecvClientCmd_ChatAccept(t *testing.T) {
 				oServiceBOSParams: fnNewOServiceBOSParams(nil),
 				authParams:        fnNewAuthParams(io.EOF),
 			},
-			wantMsg:           cmdInternalSvcErr,
+			wantMsg:           []string{cmdInternalSvcErr},
 			expectChatSession: false,
 		},
 		{
@@ -737,7 +737,7 @@ func TestOSCARProxy_RecvClientCmd_ChatAccept(t *testing.T) {
 				chatNavParams:     fnNewChatNavParams(nil),
 				oServiceBOSParams: fnNewOServiceBOSParams(io.EOF),
 			},
-			wantMsg:           cmdInternalSvcErr,
+			wantMsg:           []string{cmdInternalSvcErr},
 			expectChatSession: false,
 		},
 		{
@@ -756,7 +756,7 @@ func TestOSCARProxy_RecvClientCmd_ChatAccept(t *testing.T) {
 			mockParams: mockParams{
 				chatNavParams: fnNewChatNavParams(io.EOF),
 			},
-			wantMsg:           cmdInternalSvcErr,
+			wantMsg:           []string{cmdInternalSvcErr},
 			expectChatSession: false,
 		},
 		{
@@ -764,7 +764,7 @@ func TestOSCARProxy_RecvClientCmd_ChatAccept(t *testing.T) {
 			me:                newTestSession("me"),
 			givenCmd:          []byte(`toc_chat_accept`),
 			givenChatRegistry: NewChatRegistry(),
-			wantMsg:           cmdInternalSvcErr,
+			wantMsg:           []string{cmdInternalSvcErr},
 			expectChatSession: false,
 		},
 		{
@@ -772,7 +772,7 @@ func TestOSCARProxy_RecvClientCmd_ChatAccept(t *testing.T) {
 			me:                newTestSession("me"),
 			givenCmd:          []byte(`toc_chat_accept four`),
 			givenChatRegistry: NewChatRegistry(),
-			wantMsg:           cmdInternalSvcErr,
+			wantMsg:           []string{cmdInternalSvcErr},
 			expectChatSession: false,
 		},
 	}
@@ -838,7 +838,7 @@ func TestOSCARProxy_RecvClientCmd_ChatInvite(t *testing.T) {
 		// givenChatRegistry is the chat registry passed to the function
 		givenChatRegistry *ChatRegistry
 		// wantMsg is the expected TOC response
-		wantMsg string
+		wantMsg []string
 		// mockParams is the list of params sent to mocks that satisfy this
 		// method's dependencies
 		mockParams mockParams
@@ -939,25 +939,25 @@ func TestOSCARProxy_RecvClientCmd_ChatInvite(t *testing.T) {
 					},
 				},
 			},
-			wantMsg: cmdInternalSvcErr,
+			wantMsg: []string{cmdInternalSvcErr},
 		},
 		{
 			name:              "send chat invitation to non-existent room",
 			me:                newTestSession("me"),
 			givenCmd:          []byte(`toc_chat_invite 0 "join my chat!" friend1`),
 			givenChatRegistry: NewChatRegistry(),
-			wantMsg:           cmdInternalSvcErr,
+			wantMsg:           []string{cmdInternalSvcErr},
 		},
 		{
 			name:     "bad chat room ID",
 			givenCmd: []byte(`toc_chat_invite zero "join my chat!" friend1`),
-			wantMsg:  cmdInternalSvcErr,
+			wantMsg:  []string{cmdInternalSvcErr},
 		},
 		{
 			name:     "bad command",
 			me:       newTestSession("me"),
 			givenCmd: []byte(`toc_chat_invite`),
-			wantMsg:  cmdInternalSvcErr,
+			wantMsg:  []string{cmdInternalSvcErr},
 		},
 	}
 
@@ -1094,7 +1094,7 @@ func TestOSCARProxy_RecvClientCmd_ChatJoin(t *testing.T) {
 		// givenChatRegistry is the chat registry passed to the function
 		givenChatRegistry *ChatRegistry
 		// wantMsg is the expected TOC response
-		wantMsg string
+		wantMsg []string
 		// expectChatSession indicates whether a chat session should be present
 		// in the chat registry
 		expectChatSession bool
@@ -1113,7 +1113,7 @@ func TestOSCARProxy_RecvClientCmd_ChatJoin(t *testing.T) {
 				authParams:         fnNewAuthParams(nil),
 				oServiceChatParams: fnNewOServiceChatParams(nil),
 			},
-			wantMsg:           "CHAT_JOIN:0:cool room :)",
+			wantMsg:           []string{"CHAT_JOIN:0:cool room :)"},
 			expectChatSession: true,
 		},
 		{
@@ -1127,7 +1127,7 @@ func TestOSCARProxy_RecvClientCmd_ChatJoin(t *testing.T) {
 				authParams:         fnNewAuthParams(nil),
 				oServiceChatParams: fnNewOServiceChatParams(io.EOF),
 			},
-			wantMsg:           cmdInternalSvcErr,
+			wantMsg:           []string{cmdInternalSvcErr},
 			expectChatSession: false,
 		},
 		{
@@ -1140,7 +1140,7 @@ func TestOSCARProxy_RecvClientCmd_ChatJoin(t *testing.T) {
 				oServiceBOSParams: fnNewOServiceBOSParams(nil),
 				authParams:        fnNewAuthParams(io.EOF),
 			},
-			wantMsg:           cmdInternalSvcErr,
+			wantMsg:           []string{cmdInternalSvcErr},
 			expectChatSession: false,
 		},
 		{
@@ -1152,7 +1152,7 @@ func TestOSCARProxy_RecvClientCmd_ChatJoin(t *testing.T) {
 				chatNavParams:     fnNewChatNavParams(nil),
 				oServiceBOSParams: fnNewOServiceBOSParams(io.EOF),
 			},
-			wantMsg:           cmdInternalSvcErr,
+			wantMsg:           []string{cmdInternalSvcErr},
 			expectChatSession: false,
 		},
 		{
@@ -1163,7 +1163,7 @@ func TestOSCARProxy_RecvClientCmd_ChatJoin(t *testing.T) {
 			mockParams: mockParams{
 				chatNavParams: fnNewChatNavParams(io.EOF),
 			},
-			wantMsg:           cmdInternalSvcErr,
+			wantMsg:           []string{cmdInternalSvcErr},
 			expectChatSession: false,
 		},
 		{
@@ -1171,7 +1171,7 @@ func TestOSCARProxy_RecvClientCmd_ChatJoin(t *testing.T) {
 			me:                newTestSession("me"),
 			givenCmd:          []byte(`toc_chat_join`),
 			givenChatRegistry: NewChatRegistry(),
-			wantMsg:           cmdInternalSvcErr,
+			wantMsg:           []string{cmdInternalSvcErr},
 			expectChatSession: false,
 		},
 		{
@@ -1179,7 +1179,7 @@ func TestOSCARProxy_RecvClientCmd_ChatJoin(t *testing.T) {
 			me:                newTestSession("me"),
 			givenCmd:          []byte(`toc_chat_join four "cool room :\)"`),
 			givenChatRegistry: NewChatRegistry(),
-			wantMsg:           cmdInternalSvcErr,
+			wantMsg:           []string{cmdInternalSvcErr},
 			expectChatSession: false,
 		},
 	}
@@ -1245,7 +1245,7 @@ func TestOSCARProxy_RecvClientCmd_ChatLeave(t *testing.T) {
 		// givenChatRegistry is the chat registry passed to the function
 		givenChatRegistry *ChatRegistry
 		// wantMsg is the expected TOC response
-		wantMsg string
+		wantMsg []string
 		// mockParams is the list of params sent to mocks that satisfy this
 		// method's dependencies
 		mockParams mockParams
@@ -1268,24 +1268,24 @@ func TestOSCARProxy_RecvClientCmd_ChatLeave(t *testing.T) {
 					},
 				},
 			},
-			wantMsg: "CHAT_LEFT:0",
+			wantMsg: []string{"CHAT_LEFT:0"},
 		},
 		{
 			name:     "chat room ID with invalid format",
 			givenCmd: []byte(`toc_chat_leave zero`),
-			wantMsg:  cmdInternalSvcErr,
+			wantMsg:  []string{cmdInternalSvcErr},
 		},
 		{
 			name:              "missing chat session",
 			givenCmd:          []byte(`toc_chat_leave 0`),
 			givenChatRegistry: NewChatRegistry(),
-			wantMsg:           cmdInternalSvcErr,
+			wantMsg:           []string{cmdInternalSvcErr},
 		},
 		{
 			name:     "bad command",
 			me:       newTestSession("me"),
 			givenCmd: []byte(`toc_chat_leave`),
-			wantMsg:  cmdInternalSvcErr,
+			wantMsg:  []string{cmdInternalSvcErr},
 		},
 	}
 
@@ -1320,7 +1320,7 @@ func TestOSCARProxy_RecvClientCmd_ChatSend(t *testing.T) {
 		// givenChatRegistry is the chat registry passed to the function
 		givenChatRegistry *ChatRegistry
 		// wantMsg is the expected TOC response
-		wantMsg string
+		wantMsg []string
 		// mockParams is the list of params sent to mocks that satisfy this
 		// method's dependencies
 		mockParams mockParams
@@ -1375,7 +1375,7 @@ func TestOSCARProxy_RecvClientCmd_ChatSend(t *testing.T) {
 					},
 				},
 			},
-			wantMsg: "CHAT_IN:0:me:F:Hello world! :)",
+			wantMsg: []string{"CHAT_IN:0:me:F:Hello world! :)"},
 		},
 		{
 			name:     "send chat message, receive error from chat svc",
@@ -1411,7 +1411,7 @@ func TestOSCARProxy_RecvClientCmd_ChatSend(t *testing.T) {
 					},
 				},
 			},
-			wantMsg: cmdInternalSvcErr,
+			wantMsg: []string{cmdInternalSvcErr},
 		},
 		{
 			name:     "send chat message, receive nil response from chat svc",
@@ -1447,7 +1447,7 @@ func TestOSCARProxy_RecvClientCmd_ChatSend(t *testing.T) {
 					},
 				},
 			},
-			wantMsg: cmdInternalSvcErr,
+			wantMsg: []string{cmdInternalSvcErr},
 		},
 		{
 			name:     "send chat message, receive unexpected response from chat svc",
@@ -1485,24 +1485,24 @@ func TestOSCARProxy_RecvClientCmd_ChatSend(t *testing.T) {
 					},
 				},
 			},
-			wantMsg: cmdInternalSvcErr,
+			wantMsg: []string{cmdInternalSvcErr},
 		},
 		{
 			name:     "chat room ID with invalid format",
 			givenCmd: []byte(`toc_chat_send zero "Hello world!"`),
-			wantMsg:  cmdInternalSvcErr,
+			wantMsg:  []string{cmdInternalSvcErr},
 		},
 		{
 			name:              "missing chat session",
 			givenCmd:          []byte(`toc_chat_send 0 "Hello world!"`),
 			givenChatRegistry: NewChatRegistry(),
-			wantMsg:           cmdInternalSvcErr,
+			wantMsg:           []string{cmdInternalSvcErr},
 		},
 		{
 			name:     "bad command",
 			me:       newTestSession("me"),
 			givenCmd: []byte(`toc_chat_send`),
-			wantMsg:  cmdInternalSvcErr,
+			wantMsg:  []string{cmdInternalSvcErr},
 		},
 	}
 
@@ -1539,7 +1539,7 @@ func TestOSCARProxy_RecvClientCmd_ChatWhisper(t *testing.T) {
 		// givenChatRegistry is the chat registry passed to the function
 		givenChatRegistry *ChatRegistry
 		// wantMsg is the expected TOC response
-		wantMsg string
+		wantMsg []string
 		// mockParams is the list of params sent to mocks that satisfy this
 		// method's dependencies
 		mockParams mockParams
@@ -1577,7 +1577,7 @@ func TestOSCARProxy_RecvClientCmd_ChatWhisper(t *testing.T) {
 					},
 				},
 			},
-			wantMsg: "",
+			wantMsg: []string{""},
 		},
 		{
 			name:     "send chat whisper, receive error from chat svc",
@@ -1612,24 +1612,24 @@ func TestOSCARProxy_RecvClientCmd_ChatWhisper(t *testing.T) {
 					},
 				},
 			},
-			wantMsg: cmdInternalSvcErr,
+			wantMsg: []string{cmdInternalSvcErr},
 		},
 		{
 			name:     "chat room ID with invalid format",
 			givenCmd: []byte(`toc_chat_whisper zero them "Hello world!"`),
-			wantMsg:  cmdInternalSvcErr,
+			wantMsg:  []string{cmdInternalSvcErr},
 		},
 		{
 			name:              "missing chat session",
 			givenCmd:          []byte(`toc_chat_whisper 0 them "Hello world!"`),
 			givenChatRegistry: NewChatRegistry(),
-			wantMsg:           cmdInternalSvcErr,
+			wantMsg:           []string{cmdInternalSvcErr},
 		},
 		{
 			name:     "bad command",
 			me:       newTestSession("me"),
 			givenCmd: []byte(`toc_chat_whisper`),
-			wantMsg:  cmdInternalSvcErr,
+			wantMsg:  []string{cmdInternalSvcErr},
 		},
 	}
 
@@ -1664,7 +1664,7 @@ func TestOSCARProxy_RecvClientCmd_Evil(t *testing.T) {
 		// givenCmd is the TOC command
 		givenCmd []byte
 		// wantMsg is the expected TOC response
-		wantMsg string
+		wantMsg []string
 		// mockParams is the list of params sent to mocks that satisfy this
 		// method's dependencies
 		mockParams mockParams
@@ -1729,7 +1729,7 @@ func TestOSCARProxy_RecvClientCmd_Evil(t *testing.T) {
 					},
 				},
 			},
-			wantMsg: cmdInternalSvcErr,
+			wantMsg: []string{cmdInternalSvcErr},
 		},
 		{
 			name:     "warn, receive snac err",
@@ -1772,19 +1772,19 @@ func TestOSCARProxy_RecvClientCmd_Evil(t *testing.T) {
 					},
 				},
 			},
-			wantMsg: cmdInternalSvcErr,
+			wantMsg: []string{cmdInternalSvcErr},
 		},
 		{
 			name:     "warn with incorrect type",
 			me:       newTestSession("me"),
 			givenCmd: []byte(`toc_evil them blah`),
-			wantMsg:  cmdInternalSvcErr,
+			wantMsg:  []string{cmdInternalSvcErr},
 		},
 		{
 			name:     "bad command",
 			me:       newTestSession("me"),
 			givenCmd: []byte(`toc_evil`),
-			wantMsg:  cmdInternalSvcErr,
+			wantMsg:  []string{cmdInternalSvcErr},
 		},
 	}
 
@@ -1819,7 +1819,7 @@ func TestOSCARProxy_RecvClientCmd_ChangePassword(t *testing.T) {
 		// givenCmd is the TOC command
 		givenCmd []byte
 		// wantMsg is the expected TOC response
-		wantMsg string
+		wantMsg []string
 		// mockParams is the list of params sent to mocks that satisfy this
 		// method's dependencies
 		mockParams mockParams
@@ -1855,7 +1855,7 @@ func TestOSCARProxy_RecvClientCmd_ChangePassword(t *testing.T) {
 					},
 				},
 			},
-			wantMsg: "ADMIN_PASSWD_STATUS:0",
+			wantMsg: []string{"ADMIN_PASSWD_STATUS:0"},
 		},
 		{
 			name:     "change password - invalid password length",
@@ -1889,7 +1889,7 @@ func TestOSCARProxy_RecvClientCmd_ChangePassword(t *testing.T) {
 					},
 				},
 			},
-			wantMsg: "ERROR:911",
+			wantMsg: []string{"ERROR:911"},
 		},
 		{
 			name:     "change password - incorrect password",
@@ -1923,7 +1923,7 @@ func TestOSCARProxy_RecvClientCmd_ChangePassword(t *testing.T) {
 					},
 				},
 			},
-			wantMsg: "ERROR:912",
+			wantMsg: []string{"ERROR:912"},
 		},
 		{
 			name:     "change password - catch-all error response",
@@ -1957,7 +1957,7 @@ func TestOSCARProxy_RecvClientCmd_ChangePassword(t *testing.T) {
 					},
 				},
 			},
-			wantMsg: "ERROR:913",
+			wantMsg: []string{"ERROR:913"},
 		},
 		{
 			name:     "change password - runtime error from admin svc",
@@ -1981,7 +1981,7 @@ func TestOSCARProxy_RecvClientCmd_ChangePassword(t *testing.T) {
 					},
 				},
 			},
-			wantMsg: cmdInternalSvcErr,
+			wantMsg: []string{cmdInternalSvcErr},
 		},
 		{
 			name:     "change password - unexpected response from admin svc",
@@ -2007,13 +2007,13 @@ func TestOSCARProxy_RecvClientCmd_ChangePassword(t *testing.T) {
 					},
 				},
 			},
-			wantMsg: cmdInternalSvcErr,
+			wantMsg: []string{cmdInternalSvcErr},
 		},
 		{
 			name:     "bad command",
 			me:       newTestSession("me"),
 			givenCmd: []byte(`toc_change_passwd`),
-			wantMsg:  cmdInternalSvcErr,
+			wantMsg:  []string{cmdInternalSvcErr},
 		},
 	}
 
@@ -2048,7 +2048,7 @@ func TestOSCARProxy_RecvClientCmd_GetDirSearchURL(t *testing.T) {
 		// givenCmd is the TOC command
 		givenCmd []byte
 		// wantMsg is the expected TOC response
-		wantMsg string
+		wantMsg []string
 		// mockParams is the list of params sent to mocks that satisfy this
 		// method's dependencies
 		mockParams mockParams
@@ -2067,7 +2067,7 @@ func TestOSCARProxy_RecvClientCmd_GetDirSearchURL(t *testing.T) {
 					},
 				},
 			},
-			wantMsg: "GOTO_URL:search results:dir_search?city=city&cookie=6d6f6e73746572&country=country&email=email&first_name=first+%5Bname%5D&last_name=last+name&maiden_name=maiden+name&middle_name=middle+name&state=state",
+			wantMsg: []string{"GOTO_URL:search results:dir_search?city=city&cookie=6d6f6e73746572&country=country&email=email&first_name=first+%5Bname%5D&last_name=last+name&maiden_name=maiden+name&middle_name=middle+name&state=state"},
 		},
 		{
 			name:     "successfully request user info by keywords",
@@ -2083,13 +2083,13 @@ func TestOSCARProxy_RecvClientCmd_GetDirSearchURL(t *testing.T) {
 					},
 				},
 			},
-			wantMsg: "GOTO_URL:search results:dir_search?cookie=6d6f6e73746572&keyword=searchkw",
+			wantMsg: []string{"GOTO_URL:search results:dir_search?cookie=6d6f6e73746572&keyword=searchkw"},
 		},
 		{
 			name:     "request user info with too many params",
 			me:       newTestSession("me"),
 			givenCmd: []byte(`toc_dir_search ::::::::::::::::::::"searchkw"`),
-			wantMsg:  cmdInternalSvcErr,
+			wantMsg:  []string{cmdInternalSvcErr},
 		},
 		{
 			name:     "request user info, get cookie issue error",
@@ -2105,13 +2105,13 @@ func TestOSCARProxy_RecvClientCmd_GetDirSearchURL(t *testing.T) {
 					},
 				},
 			},
-			wantMsg: cmdInternalSvcErr,
+			wantMsg: []string{cmdInternalSvcErr},
 		},
 		{
 			name:     "bad command",
 			me:       newTestSession("me"),
 			givenCmd: []byte(`toc_dir_search`),
-			wantMsg:  cmdInternalSvcErr,
+			wantMsg:  []string{cmdInternalSvcErr},
 		},
 	}
 
@@ -2147,7 +2147,7 @@ func TestOSCARProxy_RecvClientCmd_GetDirURL(t *testing.T) {
 		// givenCmd is the TOC command
 		givenCmd []byte
 		// wantMsg is the expected TOC response
-		wantMsg string
+		wantMsg []string
 		// mockParams is the list of params sent to mocks that satisfy this
 		// method's dependencies
 		mockParams mockParams
@@ -2166,7 +2166,7 @@ func TestOSCARProxy_RecvClientCmd_GetDirURL(t *testing.T) {
 					},
 				},
 			},
-			wantMsg: "GOTO_URL:directory info:dir_info?cookie=6d6f6e73746572&user=them",
+			wantMsg: []string{"GOTO_URL:directory info:dir_info?cookie=6d6f6e73746572&user=them"},
 		},
 		{
 			name:     "request user info, get cookie issue error",
@@ -2182,13 +2182,13 @@ func TestOSCARProxy_RecvClientCmd_GetDirURL(t *testing.T) {
 					},
 				},
 			},
-			wantMsg: cmdInternalSvcErr,
+			wantMsg: []string{cmdInternalSvcErr},
 		},
 		{
 			name:     "bad command",
 			me:       newTestSession("me"),
 			givenCmd: []byte(`toc_get_dir`),
-			wantMsg:  cmdInternalSvcErr,
+			wantMsg:  []string{cmdInternalSvcErr},
 		},
 	}
 
@@ -2223,7 +2223,7 @@ func TestOSCARProxy_RecvClientCmd_GetInfoURL(t *testing.T) {
 		// givenCmd is the TOC command
 		givenCmd []byte
 		// wantMsg is the expected TOC response
-		wantMsg string
+		wantMsg []string
 		// mockParams is the list of params sent to mocks that satisfy this
 		// method's dependencies
 		mockParams mockParams
@@ -2242,7 +2242,7 @@ func TestOSCARProxy_RecvClientCmd_GetInfoURL(t *testing.T) {
 					},
 				},
 			},
-			wantMsg: "GOTO_URL:profile:info?cookie=6d6f6e73746572&from=me&user=them",
+			wantMsg: []string{"GOTO_URL:profile:info?cookie=6d6f6e73746572&from=me&user=them"},
 		},
 		{
 			name:     "request user info, get cookie issue error",
@@ -2258,13 +2258,13 @@ func TestOSCARProxy_RecvClientCmd_GetInfoURL(t *testing.T) {
 					},
 				},
 			},
-			wantMsg: cmdInternalSvcErr,
+			wantMsg: []string{cmdInternalSvcErr},
 		},
 		{
 			name:     "bad command",
 			me:       newTestSession("me"),
 			givenCmd: []byte(`toc_get_info`),
-			wantMsg:  cmdInternalSvcErr,
+			wantMsg:  []string{cmdInternalSvcErr},
 		},
 	}
 
@@ -2299,7 +2299,7 @@ func TestOSCARProxy_RecvClientCmd_GetStatus(t *testing.T) {
 		// givenCmd is the TOC command
 		givenCmd []byte
 		// wantMsg is the expected TOC response
-		wantMsg string
+		wantMsg []string
 		// mockParams is the list of params sent to mocks that satisfy this
 		// method's dependencies
 		mockParams mockParams
@@ -2334,7 +2334,7 @@ func TestOSCARProxy_RecvClientCmd_GetStatus(t *testing.T) {
 					},
 				},
 			},
-			wantMsg: "UPDATE_BUDDY:them:T:0:1234:5678: O ",
+			wantMsg: []string{"UPDATE_BUDDY:them:T:0:1234:5678: O "},
 		},
 		{
 			name:     "request status, receive err from locate svc",
@@ -2353,7 +2353,7 @@ func TestOSCARProxy_RecvClientCmd_GetStatus(t *testing.T) {
 					},
 				},
 			},
-			wantMsg: cmdInternalSvcErr,
+			wantMsg: []string{cmdInternalSvcErr},
 		},
 		{
 			name:     "request status, user not online",
@@ -2376,7 +2376,7 @@ func TestOSCARProxy_RecvClientCmd_GetStatus(t *testing.T) {
 					},
 				},
 			},
-			wantMsg: "ERROR:901:them",
+			wantMsg: []string{"ERROR:901:them"},
 		},
 		{
 			name:     "request status, receive unexpected error code",
@@ -2399,7 +2399,7 @@ func TestOSCARProxy_RecvClientCmd_GetStatus(t *testing.T) {
 					},
 				},
 			},
-			wantMsg: cmdInternalSvcErr,
+			wantMsg: []string{cmdInternalSvcErr},
 		},
 		{
 			name:     "request status, unexpected response from locate svc",
@@ -2420,13 +2420,13 @@ func TestOSCARProxy_RecvClientCmd_GetStatus(t *testing.T) {
 					},
 				},
 			},
-			wantMsg: cmdInternalSvcErr,
+			wantMsg: []string{cmdInternalSvcErr},
 		},
 		{
 			name:     "bad command",
 			me:       newTestSession("me"),
 			givenCmd: []byte(`toc_get_status`),
-			wantMsg:  cmdInternalSvcErr,
+			wantMsg:  []string{cmdInternalSvcErr},
 		},
 	}
 
@@ -2461,7 +2461,7 @@ func TestOSCARProxy_RecvClientCmd_InitDone(t *testing.T) {
 		// givenCmd is the TOC command
 		givenCmd []byte
 		// wantMsg is the expected TOC response
-		wantMsg string
+		wantMsg []string
 		// mockParams is the list of params sent to mocks that satisfy this
 		// method's dependencies
 		mockParams mockParams
@@ -2496,7 +2496,7 @@ func TestOSCARProxy_RecvClientCmd_InitDone(t *testing.T) {
 					},
 				},
 			},
-			wantMsg: cmdInternalSvcErr,
+			wantMsg: []string{cmdInternalSvcErr},
 		},
 	}
 
@@ -2531,7 +2531,7 @@ func TestOSCARProxy_RecvClientCmd_RemoveBuddy(t *testing.T) {
 		// givenCmd is the TOC command
 		givenCmd []byte
 		// wantMsg is the expected TOC response
-		wantMsg string
+		wantMsg []string
 		// mockParams is the list of params sent to mocks that satisfy this
 		// method's dependencies
 		mockParams mockParams
@@ -2595,7 +2595,7 @@ func TestOSCARProxy_RecvClientCmd_RemoveBuddy(t *testing.T) {
 					},
 				},
 			},
-			wantMsg: cmdInternalSvcErr,
+			wantMsg: []string{cmdInternalSvcErr},
 		},
 	}
 
@@ -2630,7 +2630,7 @@ func TestOSCARProxy_RecvClientCmd_RvousAccept(t *testing.T) {
 		// givenCmd is the TOC command
 		givenCmd []byte
 		// wantMsg is the expected TOC response
-		wantMsg string
+		wantMsg []string
 		// mockParams is the list of params sent to mocks that satisfy this
 		// method's dependencies
 		mockParams mockParams
@@ -2689,13 +2689,13 @@ func TestOSCARProxy_RecvClientCmd_RvousAccept(t *testing.T) {
 					},
 				},
 			},
-			wantMsg: cmdInternalSvcErr,
+			wantMsg: []string{cmdInternalSvcErr},
 		},
 		{
 			name:     "bad command",
 			me:       newTestSession("me"),
 			givenCmd: []byte(`toc_rvous_accept`),
-			wantMsg:  cmdInternalSvcErr,
+			wantMsg:  []string{cmdInternalSvcErr},
 		},
 	}
 
@@ -2730,7 +2730,7 @@ func TestOSCARProxy_RecvClientCmd_RvousCancel(t *testing.T) {
 		// givenCmd is the TOC command
 		givenCmd []byte
 		// wantMsg is the expected TOC response
-		wantMsg string
+		wantMsg []string
 		// mockParams is the list of params sent to mocks that satisfy this
 		// method's dependencies
 		mockParams mockParams
@@ -2799,13 +2799,13 @@ func TestOSCARProxy_RecvClientCmd_RvousCancel(t *testing.T) {
 					},
 				},
 			},
-			wantMsg: cmdInternalSvcErr,
+			wantMsg: []string{cmdInternalSvcErr},
 		},
 		{
 			name:     "bad command",
 			me:       newTestSession("me"),
 			givenCmd: []byte(`toc_rvous_cancel`),
-			wantMsg:  cmdInternalSvcErr,
+			wantMsg:  []string{cmdInternalSvcErr},
 		},
 	}
 
@@ -2840,7 +2840,7 @@ func TestOSCARProxy_RecvClientCmd_SendIM(t *testing.T) {
 		// givenCmd is the TOC command
 		givenCmd []byte
 		// wantMsg is the expected TOC response
-		wantMsg string
+		wantMsg []string
 		// mockParams is the list of params sent to mocks that satisfy this
 		// method's dependencies
 		mockParams mockParams
@@ -2960,13 +2960,13 @@ func TestOSCARProxy_RecvClientCmd_SendIM(t *testing.T) {
 					},
 				},
 			},
-			wantMsg: cmdInternalSvcErr,
+			wantMsg: []string{cmdInternalSvcErr},
 		},
 		{
 			name:     "bad command",
 			me:       newTestSession("me"),
 			givenCmd: []byte(`toc_send_im`),
-			wantMsg:  cmdInternalSvcErr,
+			wantMsg:  []string{cmdInternalSvcErr},
 		},
 	}
 
@@ -3001,7 +3001,7 @@ func TestOSCARProxy_RecvClientCmd_SetAway(t *testing.T) {
 		// givenCmd is the TOC command
 		givenCmd []byte
 		// wantMsg is the expected TOC response
-		wantMsg string
+		wantMsg []string
 		// mockParams is the list of params sent to mocks that satisfy this
 		// method's dependencies
 		mockParams mockParams
@@ -3069,7 +3069,7 @@ func TestOSCARProxy_RecvClientCmd_SetAway(t *testing.T) {
 					},
 				},
 			},
-			wantMsg: cmdInternalSvcErr,
+			wantMsg: []string{cmdInternalSvcErr},
 		},
 	}
 
@@ -3104,7 +3104,7 @@ func TestOSCARProxy_RecvClientCmd_SetCaps(t *testing.T) {
 		// givenCmd is the TOC command
 		givenCmd []byte
 		// wantMsg is the expected TOC response
-		wantMsg string
+		wantMsg []string
 		// mockParams is the list of params sent to mocks that satisfy this
 		// method's dependencies
 		mockParams mockParams
@@ -3181,13 +3181,13 @@ func TestOSCARProxy_RecvClientCmd_SetCaps(t *testing.T) {
 					},
 				},
 			},
-			wantMsg: cmdInternalSvcErr,
+			wantMsg: []string{cmdInternalSvcErr},
 		},
 		{
 			name:     "set malformed capability UUID",
 			me:       newTestSession("me"),
 			givenCmd: []byte(`toc_set_caps 09460000-`),
-			wantMsg:  cmdInternalSvcErr,
+			wantMsg:  []string{cmdInternalSvcErr},
 		},
 	}
 
@@ -3222,7 +3222,7 @@ func TestOSCARProxy_RecvClientCmd_SetConfig(t *testing.T) {
 		// givenCmd is the TOC command
 		givenCmd []byte
 		// wantMsg is the expected TOC response
-		wantMsg string
+		wantMsg []string
 		// mockParams is the list of params sent to mocks that satisfy this
 		// method's dependencies
 		mockParams mockParams
@@ -3302,13 +3302,13 @@ func TestOSCARProxy_RecvClientCmd_SetConfig(t *testing.T) {
 					},
 				},
 			},
-			wantMsg: cmdInternalSvcErr,
+			wantMsg: []string{cmdInternalSvcErr},
 		},
 		{
 			name:     "bad command",
 			me:       newTestSession("me"),
 			givenCmd: []byte(`toc_set_config`),
-			wantMsg:  cmdInternalSvcErr,
+			wantMsg:  []string{cmdInternalSvcErr},
 		},
 	}
 
@@ -3362,7 +3362,7 @@ func TestOSCARProxy_RecvClientCmd_SetDir(t *testing.T) {
 		// givenCmd is the TOC command
 		givenCmd []byte
 		// wantMsg is the expected TOC response
-		wantMsg string
+		wantMsg []string
 		// mockParams is the list of params sent to mocks that satisfy this
 		// method's dependencies
 		mockParams mockParams
@@ -3475,19 +3475,19 @@ func TestOSCARProxy_RecvClientCmd_SetDir(t *testing.T) {
 					},
 				},
 			},
-			wantMsg: cmdInternalSvcErr,
+			wantMsg: []string{cmdInternalSvcErr},
 		},
 		{
 			name:     "set directory with too many fields present",
 			me:       newTestSession("me"),
 			givenCmd: []byte(`toc_set_dir "first name"::"last name"::"city":"state":"country":"email":"allow web searches":"extra":"extra"`),
-			wantMsg:  cmdInternalSvcErr,
+			wantMsg:  []string{cmdInternalSvcErr},
 		},
 		{
 			name:     "bad command",
 			me:       newTestSession("me"),
 			givenCmd: []byte(`toc_set_dir`),
-			wantMsg:  cmdInternalSvcErr,
+			wantMsg:  []string{cmdInternalSvcErr},
 		},
 	}
 
@@ -3522,7 +3522,7 @@ func TestOSCARProxy_RecvClientCmd_SetIdle(t *testing.T) {
 		// givenCmd is the TOC command
 		givenCmd []byte
 		// wantMsg is the expected TOC response
-		wantMsg string
+		wantMsg []string
 		// mockParams is the list of params sent to mocks that satisfy this
 		// method's dependencies
 		mockParams mockParams
@@ -3561,18 +3561,18 @@ func TestOSCARProxy_RecvClientCmd_SetIdle(t *testing.T) {
 					},
 				},
 			},
-			wantMsg: cmdInternalSvcErr,
+			wantMsg: []string{cmdInternalSvcErr},
 		},
 		{
 			name:     "bad secs param",
 			givenCmd: []byte(`toc_set_idle zero`),
-			wantMsg:  cmdInternalSvcErr,
+			wantMsg:  []string{cmdInternalSvcErr},
 		},
 		{
 			name:     "bad command",
 			me:       newTestSession("me"),
 			givenCmd: []byte(`toc_set_idle`),
-			wantMsg:  cmdInternalSvcErr,
+			wantMsg:  []string{cmdInternalSvcErr},
 		},
 	}
 
@@ -3607,7 +3607,7 @@ func TestOSCARProxy_RecvClientCmd_SetInfo(t *testing.T) {
 		// givenCmd is the TOC command
 		givenCmd []byte
 		// wantMsg is the expected TOC response
-		wantMsg string
+		wantMsg []string
 		// mockParams is the list of params sent to mocks that satisfy this
 		// method's dependencies
 		mockParams mockParams
@@ -3654,13 +3654,13 @@ func TestOSCARProxy_RecvClientCmd_SetInfo(t *testing.T) {
 					},
 				},
 			},
-			wantMsg: cmdInternalSvcErr,
+			wantMsg: []string{cmdInternalSvcErr},
 		},
 		{
 			name:     "bad command",
 			me:       newTestSession("me"),
 			givenCmd: []byte(`toc_set_info`),
-			wantMsg:  cmdInternalSvcErr,
+			wantMsg:  []string{cmdInternalSvcErr},
 		},
 	}
 
