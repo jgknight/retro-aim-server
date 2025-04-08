@@ -52,6 +52,7 @@ func TestOSCARProxy_RecvClientCmd_AddBuddy(t *testing.T) {
 					},
 				},
 			},
+			wantMsg: []string{""},
 		},
 		{
 			name:     "add buddies with empty list",
@@ -67,6 +68,7 @@ func TestOSCARProxy_RecvClientCmd_AddBuddy(t *testing.T) {
 					},
 				},
 			},
+			wantMsg: []string{""},
 		},
 		{
 			name:     "add buddies, receive error from buddy service",
@@ -151,6 +153,7 @@ func TestOSCARProxy_RecvClientCmd_AddPermit(t *testing.T) {
 					},
 				},
 			},
+			wantMsg: []string{""},
 		},
 		{
 			name:     "permit buddies, receive error from buddy service",
@@ -189,6 +192,7 @@ func TestOSCARProxy_RecvClientCmd_AddPermit(t *testing.T) {
 					},
 				},
 			},
+			wantMsg: []string{""},
 		},
 	}
 
@@ -250,6 +254,7 @@ func TestOSCARProxy_RecvClientCmd_AddDeny(t *testing.T) {
 					},
 				},
 			},
+			wantMsg: []string{""},
 		},
 		{
 			name:     "deny buddies, receive error from buddy service",
@@ -288,6 +293,7 @@ func TestOSCARProxy_RecvClientCmd_AddDeny(t *testing.T) {
 					},
 				},
 			},
+			wantMsg: []string{""},
 		},
 	}
 
@@ -890,6 +896,7 @@ func TestOSCARProxy_RecvClientCmd_ChatInvite(t *testing.T) {
 					},
 				},
 			},
+			wantMsg: []string{""},
 		},
 		{
 			name:     "send chat invitation, receive error from ICBM svc",
@@ -1689,6 +1696,7 @@ func TestOSCARProxy_RecvClientCmd_Evil(t *testing.T) {
 					},
 				},
 			},
+			wantMsg: []string{""},
 		},
 		{
 			name:     "successfully warn anonymously",
@@ -1710,6 +1718,7 @@ func TestOSCARProxy_RecvClientCmd_Evil(t *testing.T) {
 					},
 				},
 			},
+			wantMsg: []string{""},
 		},
 		{
 			name:     "warn, receive error from ICBM service",
@@ -1751,6 +1760,7 @@ func TestOSCARProxy_RecvClientCmd_Evil(t *testing.T) {
 					},
 				},
 			},
+			wantMsg: []string{"ERROR:902"},
 		},
 		{
 			name:     "warn, ICBM svc returns unexpected snac type",
@@ -2480,6 +2490,7 @@ func TestOSCARProxy_RecvClientCmd_InitDone(t *testing.T) {
 					},
 				},
 			},
+			wantMsg: []string{""},
 		},
 		{
 			name:     "initialize connection, receive err from BOS oservice svc",
@@ -2558,6 +2569,7 @@ func TestOSCARProxy_RecvClientCmd_RemoveBuddy(t *testing.T) {
 					},
 				},
 			},
+			wantMsg: []string{""},
 		},
 		{
 			name:     "remove buddies with empty list",
@@ -2573,6 +2585,7 @@ func TestOSCARProxy_RecvClientCmd_RemoveBuddy(t *testing.T) {
 					},
 				},
 			},
+			wantMsg: []string{""},
 		},
 		{
 			name:     "remove buddies, receive error from buddy service",
@@ -2661,6 +2674,7 @@ func TestOSCARProxy_RecvClientCmd_RvousAccept(t *testing.T) {
 					},
 				},
 			},
+			wantMsg: []string{""},
 		},
 		{
 			name:     "send rendezvous request, receive error from ICBM service",
@@ -2766,6 +2780,7 @@ func TestOSCARProxy_RecvClientCmd_RvousCancel(t *testing.T) {
 					},
 				},
 			},
+			wantMsg: []string{""},
 		},
 		{
 			name:     "send rendezvous cancellation, receive error from ICBM service",
@@ -2882,6 +2897,7 @@ func TestOSCARProxy_RecvClientCmd_SendIM(t *testing.T) {
 					},
 				},
 			},
+			wantMsg: []string{""},
 		},
 		{
 			name:     "successfully auto-reply send instant message",
@@ -2921,6 +2937,7 @@ func TestOSCARProxy_RecvClientCmd_SendIM(t *testing.T) {
 					},
 				},
 			},
+			wantMsg: []string{""},
 		},
 		{
 			name:     "send instant message, receive error from ICBM service",
@@ -3026,6 +3043,7 @@ func TestOSCARProxy_RecvClientCmd_SetAway(t *testing.T) {
 					},
 				},
 			},
+			wantMsg: []string{""},
 		},
 		{
 			name:     "successfully set away without message",
@@ -3047,6 +3065,7 @@ func TestOSCARProxy_RecvClientCmd_SetAway(t *testing.T) {
 					},
 				},
 			},
+			wantMsg: []string{""},
 		},
 		{
 			name:     "set away message, receive error from locate service",
@@ -3133,6 +3152,7 @@ func TestOSCARProxy_RecvClientCmd_SetCaps(t *testing.T) {
 					},
 				},
 			},
+			wantMsg: []string{""},
 		},
 		{
 			name:     "set capabilities with empty list",
@@ -3156,6 +3176,7 @@ func TestOSCARProxy_RecvClientCmd_SetCaps(t *testing.T) {
 					},
 				},
 			},
+			wantMsg: []string{""},
 		},
 		{
 			name:     "set capability, receive error from locate service",
@@ -3241,6 +3262,7 @@ func TestOSCARProxy_RecvClientCmd_SetConfig(t *testing.T) {
 					},
 				},
 			},
+			wantMsg: []string{""},
 		},
 		{
 			name:     "successfully set permit all config (double-quoted)",
@@ -3256,6 +3278,7 @@ func TestOSCARProxy_RecvClientCmd_SetConfig(t *testing.T) {
 					},
 				},
 			},
+			wantMsg: []string{""},
 		},
 		{
 			name:     "successfully set permit all config (single-quoted)",
@@ -3271,6 +3294,7 @@ func TestOSCARProxy_RecvClientCmd_SetConfig(t *testing.T) {
 					},
 				},
 			},
+			wantMsg: []string{""},
 		},
 		{
 			name:     "successfully set permit all config (double-quoted with spaces)",
@@ -3286,6 +3310,7 @@ func TestOSCARProxy_RecvClientCmd_SetConfig(t *testing.T) {
 					},
 				},
 			},
+			wantMsg: []string{""},
 		},
 		{
 			name:     "set config, receive error from toc config store",
@@ -3393,6 +3418,7 @@ func TestOSCARProxy_RecvClientCmd_SetDir(t *testing.T) {
 					},
 				},
 			},
+			wantMsg: []string{""},
 		},
 		{
 			name:     "successfully set directory info with some blank fields",
@@ -3420,6 +3446,7 @@ func TestOSCARProxy_RecvClientCmd_SetDir(t *testing.T) {
 					},
 				},
 			},
+			wantMsg: []string{""},
 		},
 		{
 			name:     "successfully set directory info with last two fields absent",
@@ -3447,6 +3474,7 @@ func TestOSCARProxy_RecvClientCmd_SetDir(t *testing.T) {
 					},
 				},
 			},
+			wantMsg: []string{""},
 		},
 		{
 			name:     "set directory info, receive error from locate svc",
@@ -3543,6 +3571,7 @@ func TestOSCARProxy_RecvClientCmd_SetIdle(t *testing.T) {
 					},
 				},
 			},
+			wantMsg: []string{""},
 		},
 		{
 			name:     "set idle status, receive err from BOS oservice svc",
@@ -3632,6 +3661,7 @@ func TestOSCARProxy_RecvClientCmd_SetInfo(t *testing.T) {
 					},
 				},
 			},
+			wantMsg: []string{""},
 		},
 		{
 			name:     "set profile, receive error from locate svc",
@@ -3686,7 +3716,7 @@ func TestOSCARProxy_RecvClientCmd_SetInfo(t *testing.T) {
 	}
 }
 
-func TestOSCARProxy_Signon(t *testing.T) {
+func TestOSCARProxy_Signon_TOC1(t *testing.T) {
 	roastedPass := wire.RoastTOCPassword([]byte("thepass"))
 
 	cases := []struct {
@@ -3753,7 +3783,7 @@ func TestOSCARProxy_Signon(t *testing.T) {
 					},
 				},
 			},
-			wantMsg: []string{"SIGN_ON:TOC1.0", "CONFIG:my-toc-config"},
+			wantMsg: []string{"SIGN_ON:TOC1.0", "CONFIG:my-toc-config", "NICK:me"},
 		},
 		{
 			name:     "login, receive error from auth svc FLAP login",
@@ -4029,6 +4059,129 @@ func TestOSCARProxy_Signon(t *testing.T) {
 	}
 }
 
+func TestOSCARProxy_Signon_TOC2(t *testing.T) {
+	roastedPass := wire.RoastTOCPassword([]byte("thepass"))
+
+	cases := []struct {
+		// name is the unit test name
+		name string
+		// me is the TOC user session
+		me *state.Session
+		// givenCmd is the TOC command
+		givenCmd []byte
+		// wantMsg is the expected TOC response
+		wantMsg []string
+		// mockParams is the list of params sent to mocks that satisfy this
+		// method's dependencies
+		mockParams mockParams
+	}{
+		{
+			name: "successfully login",
+			me: newTestSession("me", func(session *state.Session) {
+				session.SetCaps([][16]byte{wire.CapChat})
+			}),
+			givenCmd: []byte(`"" "" me "xx` + hex.EncodeToString(roastedPass) + `"`),
+			mockParams: mockParams{
+				authParams: authParams{
+					flapLoginParams: flapLoginParams{
+						{
+							frame: wire.FLAPSignonFrame{
+								TLVRestBlock: wire.TLVRestBlock{
+									TLVList: wire.TLVList{
+										wire.NewTLVBE(wire.LoginTLVTagsScreenName, "me"),
+										wire.NewTLVBE(wire.LoginTLVTagsRoastedTOCPassword, roastedPass),
+									},
+								},
+							},
+							newUserFn: state.NewStubUser,
+							tlv: wire.TLVRestBlock{
+								TLVList: wire.TLVList{
+									wire.NewTLVBE(wire.OServiceTLVTagsLoginCookie, []byte("thecookie")),
+								},
+							},
+						},
+					},
+					registerBOSSessionParams: registerBOSSessionParams{
+						{
+							authCookie: []byte("thecookie"),
+							sess:       newTestSession("me"),
+						},
+					},
+				},
+				buddyListRegistryParams: buddyListRegistryParams{
+					registerBuddyListParams: registerBuddyListParams{
+						{
+							user: state.NewIdentScreenName("me"),
+						},
+					},
+				},
+				tocConfigParams: tocConfigParams{
+					userParams: userParams{
+						{
+							screenName: state.NewIdentScreenName("me"),
+							returnedUser: &state.User{
+								TOCConfig: "my-toc-config",
+							},
+						},
+					},
+				},
+			},
+			wantMsg: []string{"SIGN_ON:TOC2.0", "NICK:me", "CONFIG:my-toc-config"},
+		},
+		{
+			name:     "bad command",
+			givenCmd: []byte(`"" ""`),
+			wantMsg:  []string{cmdInternalSvcErr},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx := context.Background()
+
+			authSvc := newMockAuthService(t)
+			for _, params := range tc.mockParams.flapLoginParams {
+				authSvc.EXPECT().
+					FLAPLogin(matchContext(), params.frame, mock.Anything).
+					Return(params.tlv, params.err)
+			}
+			for _, params := range tc.mockParams.registerBOSSessionParams {
+				authSvc.EXPECT().
+					RegisterBOSSession(matchContext(), params.authCookie).
+					Return(params.sess, params.err)
+			}
+			buddyRegistry := newMockBuddyListRegistry(t)
+			for _, params := range tc.mockParams.registerBuddyListParams {
+				buddyRegistry.EXPECT().
+					RegisterBuddyList(matchContext(), params.user).
+					Return(params.err)
+			}
+			tocCfg := newMockTOCConfigStore(t)
+			for _, params := range tc.mockParams.userParams {
+				tocCfg.EXPECT().
+					User(matchContext(), params.screenName).
+					Return(params.returnedUser, params.err)
+			}
+
+			svc := OSCARProxy{
+				AuthService:       authSvc,
+				BuddyListRegistry: buddyRegistry,
+				Logger:            slog.Default(),
+				TOCConfigStore:    tocCfg,
+			}
+			sess, msg := svc.Signon(ctx, tc.givenCmd, 2)
+
+			assert.Equal(t, tc.wantMsg, msg)
+			if tc.me == nil {
+				assert.Nil(t, sess)
+			} else if assert.NotNil(t, sess) {
+				assert.Equal(t, tc.me.IdentScreenName(), sess.IdentScreenName())
+				assert.Equal(t, tc.me.Caps(), sess.Caps())
+			}
+		})
+	}
+}
+
 func TestOSCARProxy_Signout(t *testing.T) {
 	cases := []struct {
 		// name is the unit test name
@@ -4199,7 +4352,7 @@ func TestOSCARProxy_RecvClientCmd_UnknownCmd(t *testing.T) {
 	cmd := []byte("toc_unknown_cmd")
 	msg := svc.RecvClientCmd(ctx, nil, nil, cmd, nil, nil)
 
-	assert.Equal(t, cmdInternalSvcErr, msg)
+	assert.Equal(t, cmdInternalSvcErr, msg[0])
 }
 
 func Test_parseArgs(t *testing.T) {

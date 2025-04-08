@@ -925,8 +925,12 @@ func (s OSCARProxy) Evil(ctx context.Context, me *state.Session, args []byte) []
 //	Reformat a user's nickname. An ADMIN_NICK_STATUS or ERROR message will be
 //	sent back to the client.
 //
+// From the BizTOCSock documentation:
+//
+//	[NICK is also sent with ADMIN_NICK_STATUS. This gets called [...] whenever
+//	you do a format change.
+//
 // Command syntax: toc_format_nickname <new_format>
-// jgk: also need to send NICK:formatted nick
 func (s OSCARProxy) FormatNickname(ctx context.Context, me *state.Session, args []byte) []string {
 	if errMsg, isLimited := s.checkRateLimit(ctx, me, wire.Admin, wire.AdminInfoChangeRequest); isLimited {
 		return errMsg
@@ -968,8 +972,12 @@ func (s OSCARProxy) FormatNickname(ctx context.Context, me *state.Session, args 
 			return []string{"ERROR:" + wire.TOCErrorAdminProcessingRequest}
 		}
 	}
+	val, hasVal := replyBody.TLVBlock.String(wire.AdminTLVScreenNameFormatted)
+	if !hasVal {
+		return s.runtimeErr(ctx, fmt.Errorf("AdminService.InfoChangeRequest: missing AdminTLVScreenNameFormatted %v", replyBody))
+	}
 
-	return []string{"ADMIN_NICK_STATUS:0", "NICK:" + me.DisplayScreenName().String()}
+	return []string{"ADMIN_NICK_STATUS:0", "NICK:" + val}
 }
 
 // GetDirSearchURL handles the toc_dir_search TOC command.
@@ -1712,59 +1720,95 @@ func (s OSCARProxy) Signon(ctx context.Context, args []byte, tocVersion int) (*s
 		return sess, []string{"SIGN_ON:TOC1.0", fmt.Sprintf("CONFIG:%s", u.TOCConfig), fmt.Sprintf("NICK:%s", sess.DisplayScreenName().String())}
 	}
 
-	// pref:1835295\n
-	// 25:RecentUser:#\n (random or inc number?)
-	// need to split u.TOCConfig up so it doesn't exceed max pkt size of 8k. not implemented yet
-
-	// In TOC2.0, the TOCConfig is "automatically" saved. That is, the client doesn't need to send toc_set_config
 	fb, err := s.FeedbagManager.Feedbag(ctx, sess.IdentScreenName())
 	if err != nil {
 		return nil, s.runtimeErr(ctx, fmt.Errorf("FeedbagManager.Feedbag: %w", err))
 	}
-	TOC2Config := ""
+
+	signon := []string{"SIGN_ON:TOC2.0", fmt.Sprintf("NICK:%s", sess.DisplayScreenName().String())}
+	config := buildToc2Config(fb)
+	// if err != nil {
+	// 	return nil, s.runtimeErr(ctx, fmt.Errorf("buildToc2Config: %w", err))
+	// }
+	return sess, append(signon, config...)
+}
+
+// buildToc2Config constructs configuration for CONFIG2
+func buildToc2Config(fb []wire.FeedbagItem) []string {
+	config := []string{""}
 	groupNames := make(map[uint16]string)
 	groupMembers := make(map[uint16][]wire.FeedbagItem)
 
-	if len(fb) > 0 {
-		for _, b := range fb {
-			if b.ClassID == wire.FeedbagClassIdGroup {
-				groupNames[b.GroupID] = b.Name
-			}
-			if b.ClassID == wire.FeedbagClassIdBuddy {
-				groupMembers[b.GroupID] = append(groupMembers[b.GroupID], b)
-			}
-			if b.ClassID == wire.FeedbagClassIDDeny {
-				TOC2Config += "d:" + b.Name + "\n"
-			}
-			if b.ClassID == wire.FeedbagClassIDPermit {
-				TOC2Config += "p:" + b.Name + "\n"
-			}
-			// if b.ClassID == wire.FeedbagClassIdPdinfo {
-			// 	// store this as "m:"
-			// 	TOC2Config += "m:" + b.Name + "\n"
-			// }
-
-			//fmt.Printf("\n\nclassID:%x\nname: %s (%x)\ngroupID: %x\nitemid: %x\n", b.ClassID, b.Name, b.Name, b.GroupID, b.ItemID)
+	for _, item := range fb {
+		if item.ClassID == wire.FeedbagClassIdGroup {
+			groupNames[item.GroupID] = item.Name
 		}
-		for id, name := range groupNames {
-			TOC2Config += "g:" + name + "\n"
-			for _, member := range groupMembers[id] {
-				TOC2Config += "b:" + member.Name
-				for _, tlv := range member.TLVLBlock.TLVList {
-					if tlv.Tag == wire.FeedbagAttributesNote {
-						TOC2Config += ":::::" + string(tlv.Value)
-						break
-					}
-				}
-
-				TOC2Config += "\n"
+		if item.ClassID == wire.FeedbagClassIdBuddy {
+			groupMembers[item.GroupID] = append(groupMembers[item.GroupID], item)
+		}
+		if item.ClassID == wire.FeedbagClassIDDeny {
+			config = append(config, "d:"+item.Name+"\n")
+		}
+		if item.ClassID == wire.FeedbagClassIDPermit {
+			config = append(config, "p:"+item.Name+"\n")
+		}
+		if item.ClassID == wire.FeedbagClassIdPdinfo {
+			val, hasVal := item.Uint8(wire.FeedbagAttributesPdMode)
+			if hasVal {
+				config = append(config, fmt.Sprintf("m:%d\n", val))
 			}
 		}
-
-		fmt.Println("building CONFIG2:\n\n" + TOC2Config + "\n\n")
 	}
-	return sess, []string{"SIGN_ON:TOC2.0", fmt.Sprintf("CONFIG2:%sdone:\n", TOC2Config), fmt.Sprintf("NICK:%s", sess.DisplayScreenName().String())}
+	for id, name := range groupNames {
+		config = append(config, "g:"+name+"\n")
+		for _, member := range groupMembers[id] {
+			tmpLine := "b:" + member.Name
+			val, hasVal := member.String(wire.FeedbagAttributesNote)
+			if hasVal {
+				tmpLine += ":::::" + val
+			}
+			config = append(config, tmpLine+"\n")
+		}
+	}
+	config = append(config, "done:\n")
+	// pref:1835295\n
+	// 25:RecentUser:#\n (random or inc number?)
 
+	// todo: this sometimes returns in a different order. fix that
+	return buildConfigCommands(config)
+}
+
+// buildConfigCommands takes the given input config and splits it to meet the TOC maximumm allowed
+// size of 8000 bytes. The 'CONFIG2:' command is prepended to each chunk.
+func buildConfigCommands(config []string) []string {
+	const maxSize = 8000
+
+	var configChunks []string
+	var currentChunk strings.Builder
+	//var err error
+
+	for _, line := range config {
+		if len(line) > maxSize {
+			// Skip lines that are too large
+			continue
+		}
+		// If this line would cause us to go over maxSize, then write it and start new
+		if len(line)+currentChunk.Len() > maxSize {
+			configChunks = append(configChunks, "CONFIG2:"+currentChunk.String())
+			currentChunk.Reset()
+		}
+		_, err := currentChunk.WriteString(line)
+		if err != nil {
+			// capture error
+			continue
+		}
+	}
+	// write out the final chunk
+	configChunks = append(configChunks, "CONFIG2:"+currentChunk.String())
+
+	fmt.Printf("successfully built %d chunks: %s", len(configChunks), configChunks[0])
+
+	return configChunks
 }
 
 // Signout terminates a TOC session. It sends departure notifications to
