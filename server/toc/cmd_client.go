@@ -270,7 +270,7 @@ func (s OSCARProxy) AddBuddy(ctx context.Context, me *state.Session, args []byte
 		return s.runtimeErr(ctx, fmt.Errorf("BuddyService.AddBuddies: %w", err))
 	}
 
-	return []string{""}
+	return []string{}
 }
 
 // AddPermit handles the toc_add_permit TOC command.
@@ -303,7 +303,7 @@ func (s OSCARProxy) AddPermit(ctx context.Context, me *state.Session, args []byt
 	if err := s.PermitDenyService.AddPermListEntries(ctx, me, snac); err != nil {
 		return s.runtimeErr(ctx, fmt.Errorf("PermitDenyService.AddPermListEntries: %w", err))
 	}
-	return []string{""}
+	return []string{}
 }
 
 // AddDeny handles the toc_add_deny TOC command.
@@ -336,7 +336,7 @@ func (s OSCARProxy) AddDeny(ctx context.Context, me *state.Session, args []byte)
 	if err := s.PermitDenyService.AddDenyListEntries(ctx, me, snac); err != nil {
 		return s.runtimeErr(ctx, fmt.Errorf("PermitDenyService.AddDenyListEntries: %w", err))
 	}
-	return []string{""}
+	return []string{}
 }
 
 // ChangePassword handles the toc_change_passwd TOC command.
@@ -569,7 +569,7 @@ func (s OSCARProxy) ChatInvite(ctx context.Context, me *state.Session, chatRegis
 		}
 	}
 
-	return []string{""}
+	return []string{}
 }
 
 // ChatJoin handles the toc_chat_join TOC command.
@@ -863,7 +863,7 @@ func (s OSCARProxy) ChatWhisper(ctx context.Context, chatRegistry *ChatRegistry,
 		return s.runtimeErr(ctx, fmt.Errorf("ChatService.ChannelMsgToHost: %w", err))
 	}
 
-	return []string{""}
+	return []string{}
 }
 
 // Evil handles the toc_evil TOC command.
@@ -909,7 +909,7 @@ func (s OSCARProxy) Evil(ctx context.Context, me *state.Session, args []byte) []
 
 	switch v := response.Body.(type) {
 	case wire.SNAC_0x04_0x09_ICBMEvilReply:
-		return []string{""}
+		return []string{}
 	case wire.SNACError:
 		s.Logger.InfoContext(ctx, "unable to warn user", "code", v.Code)
 		return []string{"ERROR:" + wire.TOCErrorGeneralWarningUserNotAvailable}
@@ -1173,7 +1173,7 @@ func (s OSCARProxy) InitDone(ctx context.Context, sess *state.Session) []string 
 	if err := s.OServiceServiceBOS.ClientOnline(ctx, wire.SNAC_0x01_0x02_OServiceClientOnline{}, sess); err != nil {
 		return s.runtimeErr(ctx, fmt.Errorf("OServiceServiceBOS.ClientOnliney: %w", err))
 	}
-	return []string{""}
+	return []string{}
 }
 
 // RemoveBuddy handles the toc_remove_buddy TOC command.
@@ -1203,7 +1203,7 @@ func (s OSCARProxy) RemoveBuddy(ctx context.Context, me *state.Session, args []b
 	if err := s.BuddyService.DelBuddies(ctx, me, snac); err != nil {
 		return s.runtimeErr(ctx, fmt.Errorf("BuddyService.DelBuddies: %w", err))
 	}
-	return []string{""}
+	return []string{}
 }
 
 // RvousAccept handles the toc_rvous_accept TOC command.
@@ -1260,7 +1260,7 @@ func (s OSCARProxy) RvousAccept(ctx context.Context, me *state.Session, args []b
 		return s.runtimeErr(ctx, fmt.Errorf("ICBMService.ChannelMsgToHost: %w", err))
 	}
 
-	return []string{""}
+	return []string{}
 }
 
 // RvousCancel handles the toc_rvous_cancel TOC command.
@@ -1322,7 +1322,7 @@ func (s OSCARProxy) RvousCancel(ctx context.Context, me *state.Session, args []b
 		return s.runtimeErr(ctx, fmt.Errorf("ICBMService.ChannelMsgToHost: %w", err))
 	}
 
-	return []string{""}
+	return []string{}
 }
 
 // SendIM handles the toc_send_im TOC command.
@@ -1373,7 +1373,7 @@ func (s OSCARProxy) SendIM(ctx context.Context, sender *state.Session, args []by
 		return s.runtimeErr(ctx, fmt.Errorf("ICBMService.ChannelMsgToHost: %w", err))
 	}
 
-	return []string{""}
+	return []string{}
 }
 
 // SetAway handles the toc_set_away TOC command.
@@ -1413,7 +1413,7 @@ func (s OSCARProxy) SetAway(ctx context.Context, me *state.Session, args []byte)
 		return s.runtimeErr(ctx, fmt.Errorf("LocateService.SetInfo: %w", err))
 	}
 
-	return []string{""}
+	return []string{}
 }
 
 // SetCaps handles the toc_set_caps TOC command.
@@ -1462,7 +1462,7 @@ func (s OSCARProxy) SetCaps(ctx context.Context, me *state.Session, args []byte)
 		return s.runtimeErr(ctx, fmt.Errorf("LocateService.SetInfo: %w", err))
 	}
 
-	return []string{""}
+	return []string{}
 }
 
 // SetConfig handles the toc_set_config TOC command.
@@ -1511,7 +1511,7 @@ func (s OSCARProxy) SetConfig(ctx context.Context, me *state.Session, args []byt
 		return s.runtimeErr(ctx, fmt.Errorf("TOCConfigStore.SaveTOCConfig: %w", err))
 	}
 
-	return []string{""}
+	return []string{}
 }
 
 // SetDir handles the toc_set_dir TOC command.
@@ -1569,7 +1569,7 @@ func (s OSCARProxy) SetDir(ctx context.Context, me *state.Session, args []byte) 
 		return s.runtimeErr(ctx, fmt.Errorf("LocateService.SetDirInfo: %w", err))
 	}
 
-	return []string{""}
+	return []string{}
 }
 
 // SetIdle handles the toc_set_idle TOC command.
@@ -1605,7 +1605,7 @@ func (s OSCARProxy) SetIdle(ctx context.Context, me *state.Session, args []byte)
 		return s.runtimeErr(ctx, fmt.Errorf("OServiceServiceBOS.IdleNotification: %w", err))
 	}
 
-	return []string{""}
+	return []string{}
 }
 
 // SetInfo handles the toc_set_info TOC command.
@@ -1638,7 +1638,7 @@ func (s OSCARProxy) SetInfo(ctx context.Context, me *state.Session, args []byte)
 		return s.runtimeErr(ctx, fmt.Errorf("LocateService.SetInfo: %w", err))
 	}
 
-	return []string{""}
+	return []string{}
 }
 
 // Signon handles the toc_signon and toc2_login TOC commands.
@@ -1735,46 +1735,96 @@ func (s OSCARProxy) Signon(ctx context.Context, args []byte, tocVersion int) (*s
 
 // buildToc2Config constructs configuration for CONFIG2
 func buildToc2Config(fb []wire.FeedbagItem) []string {
-	config := []string{""}
-	groupNames := make(map[uint16]string)
-	groupMembers := make(map[uint16][]wire.FeedbagItem)
+	config := []string{}
+
+	type buddy struct {
+		name string
+		note string
+	}
+	type group struct {
+		name    string
+		buddies map[uint16]buddy
+		order   []uint16
+	}
+	type feedbag struct {
+		order  []uint16
+		groups map[uint16]group
+	}
+	buddylist := feedbag{
+		groups: make(map[uint16]group),
+	}
 
 	for _, item := range fb {
 		if item.ClassID == wire.FeedbagClassIdGroup {
-			groupNames[item.GroupID] = item.Name
+			// if this is group id 0 (name is blank) then it should contain the order of all groups
+			if item.GroupID == 0 {
+				val, hasVal := item.Uint16SliceBE(wire.FeedbagAttributesOrder)
+				if !hasVal {
+					// probably return an error here because the rest will fail
+				}
+				buddylist.order = val
+				continue
+			}
+			// otherwise, create a new group. It contains the buddy id order
+			group := group{
+				name:    item.Name,
+				buddies: make(map[uint16]buddy),
+			}
+			val, hasVal := item.Uint16SliceBE(wire.FeedbagAttributesOrder)
+			if !hasVal {
+				// probably return an error here because the rest will fail
+			}
+			group.order = val
+			buddylist.groups[item.GroupID] = group
 		}
 		if item.ClassID == wire.FeedbagClassIdBuddy {
-			groupMembers[item.GroupID] = append(groupMembers[item.GroupID], item)
+			// store the buddy in its group along with name and note
+			buddy := buddy{
+				name: item.Name,
+			}
+			if val, hasVal := item.String(wire.FeedbagAttributesNote); hasVal {
+				buddy.note = val
+			}
+			buddylist.groups[item.GroupID].buddies[item.ItemID] = buddy
 		}
 		if item.ClassID == wire.FeedbagClassIDDeny {
+			// add blocked users directly to config
 			config = append(config, "d:"+item.Name+"\n")
 		}
 		if item.ClassID == wire.FeedbagClassIDPermit {
+			// add allowed users directly to the config
 			config = append(config, "p:"+item.Name+"\n")
 		}
 		if item.ClassID == wire.FeedbagClassIdPdinfo {
+			// add PdMode directly to the config
 			val, hasVal := item.Uint8(wire.FeedbagAttributesPdMode)
 			if hasVal {
 				config = append(config, fmt.Sprintf("m:%d\n", val))
 			}
 		}
 	}
-	for id, name := range groupNames {
-		config = append(config, "g:"+name+"\n")
-		for _, member := range groupMembers[id] {
-			tmpLine := "b:" + member.Name
-			val, hasVal := member.String(wire.FeedbagAttributesNote)
-			if hasVal {
-				tmpLine += ":::::" + val
+
+	// Loop through all of the groups in order and add g: to config
+	for _, gid := range buddylist.order {
+		group := buddylist.groups[gid]
+		config = append(config, "g:"+group.name+"\n")
+
+		// loop through all of the group members in order and add b: to the config
+		// if they have a comment then also append it to the buddy
+		for _, bid := range group.order {
+			buddy := group.buddies[bid]
+			tmpLine := "b:" + buddy.name
+			if buddy.note != "" {
+				tmpLine += ":::::" + buddy.note
 			}
 			config = append(config, tmpLine+"\n")
 		}
 	}
 	config = append(config, "done:\n")
+
+	// these commands are given as examples in CONFIG2, but biztocsock doesn't parse them
 	// pref:1835295\n
 	// 25:RecentUser:#\n (random or inc number?)
-
-	// todo: this sometimes returns in a different order. fix that
 	return buildConfigCommands(config)
 }
 

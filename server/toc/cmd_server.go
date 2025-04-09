@@ -182,7 +182,7 @@ func (s OSCARProxy) IMIn(ctx context.Context, chatRegistry *ChatRegistry, snac w
 		return []string{s.convertICBMRendezvous(ctx, chatRegistry, snac)}
 	default:
 		s.Logger.DebugContext(ctx, "received unsupported ICBM channel message", "channel_id", snac.ChannelID)
-		return []string{""}
+		return []string{}
 	}
 }
 

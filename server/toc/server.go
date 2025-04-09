@@ -344,10 +344,7 @@ func (rt Server) runClientCommands(ctx context.Context, doAsync func(f func() er
 			}
 
 			msg := rt.BOSProxy.RecvClientCmd(ctx, sessBOS, chatRegistry, clientFrame.Payload, toCh, doAsync)
-			// jgk: checking for empty string in slice. This works because for now we will never
-			// send more than one response if element 0 is empty.
-			// should i be iterating all elements and filering out empty strings instead?
-			if len(msg) > 0 && len(msg[0]) > 0 {
+			if len(msg) > 0 {
 				select {
 				case toCh <- msg:
 				case <-ctx.Done():
