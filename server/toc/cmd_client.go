@@ -1145,7 +1145,7 @@ func (s OSCARProxy) GetStatus(ctx context.Context, me *state.Session, args []byt
 			return s.runtimeErr(ctx, fmt.Errorf("LocateService.UserInfoQuery error code: %d", v.Code))
 		}
 	case wire.SNAC_0x02_0x06_LocateUserInfoReply:
-		return []string{userInfoToUpdateBuddy(v.TLVUserInfo)}
+		return []string{userInfoToUpdateBuddy(v.TLVUserInfo, me)}
 	default:
 		return s.runtimeErr(ctx, fmt.Errorf("AdminService.InfoChangeRequest: unexpected response type %v", v))
 	}
@@ -1167,11 +1167,15 @@ func (s OSCARProxy) GetStatus(ctx context.Context, me *state.Session, args []byt
 //
 // Command syntax: toc_init_done
 func (s OSCARProxy) InitDone(ctx context.Context, sess *state.Session) []string {
+	err := s.FeedbagManager.UseFeedbag(ctx, sess.IdentScreenName())
+	if err != nil {
+		return s.runtimeErr(ctx, fmt.Errorf("FeedbagManager.UseFeedbag: %w", err))
+	}
 	if errMsg, isLimited := s.checkRateLimit(ctx, sess, wire.OService, wire.OServiceClientOnline); isLimited {
 		return errMsg
 	}
 	if err := s.OServiceServiceBOS.ClientOnline(ctx, wire.SNAC_0x01_0x02_OServiceClientOnline{}, sess); err != nil {
-		return s.runtimeErr(ctx, fmt.Errorf("OServiceServiceBOS.ClientOnliney: %w", err))
+		return s.runtimeErr(ctx, fmt.Errorf("OServiceServiceBOS.ClientOnline: %w", err))
 	}
 	return []string{}
 }
@@ -1722,19 +1726,19 @@ func (s OSCARProxy) Signon(ctx context.Context, args []byte, tocVersion int) (*s
 
 	fb, err := s.FeedbagManager.Feedbag(ctx, sess.IdentScreenName())
 	if err != nil {
-		return nil, s.runtimeErr(ctx, fmt.Errorf("FeedbagManager.Feedbag: %w", err))
+		return sess, s.runtimeErr(ctx, fmt.Errorf("FeedbagManager.Feedbag: %w", err))
 	}
 
 	signon := []string{"SIGN_ON:TOC2.0", fmt.Sprintf("NICK:%s", sess.DisplayScreenName().String())}
-	config := buildToc2Config(fb)
-	// if err != nil {
-	// 	return nil, s.runtimeErr(ctx, fmt.Errorf("buildToc2Config: %w", err))
-	// }
+	config, err := buildToc2Config(fb)
+	if err != nil {
+		return sess, s.runtimeErr(ctx, fmt.Errorf("buildToc2Config: %w", err))
+	}
 	return sess, append(signon, config...)
 }
 
 // buildToc2Config constructs configuration for CONFIG2
-func buildToc2Config(fb []wire.FeedbagItem) []string {
+func buildToc2Config(fb []wire.FeedbagItem) ([]string, error) {
 	config := []string{}
 
 	type buddy struct {
@@ -1756,29 +1760,26 @@ func buildToc2Config(fb []wire.FeedbagItem) []string {
 
 	for _, item := range fb {
 		if item.ClassID == wire.FeedbagClassIdGroup {
-			// if this is group id 0 (name is blank) then it should contain the order of all groups
+			// root group contains the order of all other groups
 			if item.GroupID == 0 {
 				val, hasVal := item.Uint16SliceBE(wire.FeedbagAttributesOrder)
 				if !hasVal {
-					// probably return an error here because the rest will fail
+					return []string{}, fmt.Errorf("root group missing order attribute")
 				}
 				buddylist.order = val
 				continue
 			}
-			// otherwise, create a new group. It contains the buddy id order
+
 			group := group{
 				name:    item.Name,
 				buddies: make(map[uint16]buddy),
 			}
-			val, hasVal := item.Uint16SliceBE(wire.FeedbagAttributesOrder)
-			if !hasVal {
-				// probably return an error here because the rest will fail
-			}
+			// order will be empty if the group is empty
+			val, _ := item.Uint16SliceBE(wire.FeedbagAttributesOrder)
 			group.order = val
 			buddylist.groups[item.GroupID] = group
 		}
 		if item.ClassID == wire.FeedbagClassIdBuddy {
-			// store the buddy in its group along with name and note
 			buddy := buddy{
 				name: item.Name,
 			}
@@ -1788,15 +1789,12 @@ func buildToc2Config(fb []wire.FeedbagItem) []string {
 			buddylist.groups[item.GroupID].buddies[item.ItemID] = buddy
 		}
 		if item.ClassID == wire.FeedbagClassIDDeny {
-			// add blocked users directly to config
 			config = append(config, "d:"+item.Name+"\n")
 		}
 		if item.ClassID == wire.FeedbagClassIDPermit {
-			// add allowed users directly to the config
 			config = append(config, "p:"+item.Name+"\n")
 		}
 		if item.ClassID == wire.FeedbagClassIdPdinfo {
-			// add PdMode directly to the config
 			val, hasVal := item.Uint8(wire.FeedbagAttributesPdMode)
 			if hasVal {
 				config = append(config, fmt.Sprintf("m:%d\n", val))
@@ -1804,13 +1802,10 @@ func buildToc2Config(fb []wire.FeedbagItem) []string {
 		}
 	}
 
-	// Loop through all of the groups in order and add g: to config
 	for _, gid := range buddylist.order {
 		group := buddylist.groups[gid]
 		config = append(config, "g:"+group.name+"\n")
 
-		// loop through all of the group members in order and add b: to the config
-		// if they have a comment then also append it to the buddy
 		for _, bid := range group.order {
 			buddy := group.buddies[bid]
 			tmpLine := "b:" + buddy.name
@@ -1822,43 +1817,43 @@ func buildToc2Config(fb []wire.FeedbagItem) []string {
 	}
 	config = append(config, "done:\n")
 
-	// these commands are given as examples in CONFIG2, but biztocsock doesn't parse them
-	// pref:1835295\n
-	// 25:RecentUser:#\n (random or inc number?)
+	// todo: these are documented in BizTOCSock as being sent in the CONFIG2 command,
+	// but are not currently implemented
+	//  25: - Recent user, followed by an unknown random or incrementing number
+	//  M: - Unknown
+	//  20:, 26:, 29: - Unknown
+
 	return buildConfigCommands(config)
 }
 
 // buildConfigCommands takes the given input config and splits it to meet the TOC maximumm allowed
 // size of 8000 bytes. The 'CONFIG2:' command is prepended to each chunk.
-func buildConfigCommands(config []string) []string {
+func buildConfigCommands(config []string) ([]string, error) {
 	const maxSize = 8000
 
 	var configChunks []string
-	var currentChunk strings.Builder
-	//var err error
+	var chunk strings.Builder
 
 	for _, line := range config {
 		if len(line) > maxSize {
-			// Skip lines that are too large
+			// todo: for now just skip entries that are too large to fit into a single CONFIG2 command
 			continue
 		}
-		// If this line would cause us to go over maxSize, then write it and start new
-		if len(line)+currentChunk.Len() > maxSize {
-			configChunks = append(configChunks, "CONFIG2:"+currentChunk.String())
-			currentChunk.Reset()
+
+		if len(line)+chunk.Len() > maxSize {
+			configChunks = append(configChunks, "CONFIG2:"+chunk.String())
+			chunk.Reset()
 		}
-		_, err := currentChunk.WriteString(line)
+
+		_, err := chunk.WriteString(line)
 		if err != nil {
-			// capture error
-			continue
+			return []string{}, fmt.Errorf("buildConfigCommands chunk.WriteString: %w", err)
 		}
 	}
-	// write out the final chunk
-	configChunks = append(configChunks, "CONFIG2:"+currentChunk.String())
 
-	fmt.Printf("successfully built %d chunks: %s", len(configChunks), configChunks[0])
+	configChunks = append(configChunks, "CONFIG2:"+chunk.String())
 
-	return configChunks
+	return configChunks, nil
 }
 
 // Signout terminates a TOC session. It sends departure notifications to

@@ -34,7 +34,7 @@ func (s OSCARProxy) RecvBOS(ctx context.Context, me *state.Session, chatRegistry
 		case snac := <-me.ReceiveMessage():
 			switch v := snac.Body.(type) {
 			case wire.SNAC_0x03_0x0B_BuddyArrived:
-				sendOrCancel(ctx, ch, s.UpdateBuddyArrival(v))
+				sendOrCancel(ctx, ch, s.UpdateBuddyArrival(v, me))
 			case wire.SNAC_0x03_0x0C_BuddyDeparted:
 				sendOrCancel(ctx, ch, s.UpdateBuddyDeparted(v))
 			case wire.SNAC_0x04_0x07_ICBMChannelMsgToClient:
@@ -308,8 +308,8 @@ func (s OSCARProxy) convertICBMRendezvous(ctx context.Context, chatRegistry *Cha
 //			- 'U' - The user has set their unavailable flag.
 //
 // Command syntax: UPDATE_BUDDY:<Buddy User>:<Online? T/F>:<Evil Amount>:<Signon Time>:<IdleTime>:<UC>
-func (s OSCARProxy) UpdateBuddyArrival(snac wire.SNAC_0x03_0x0B_BuddyArrived) []string {
-	return []string{userInfoToUpdateBuddy(snac.TLVUserInfo)}
+func (s OSCARProxy) UpdateBuddyArrival(snac wire.SNAC_0x03_0x0B_BuddyArrived, me *state.Session) []string {
+	return []string{userInfoToUpdateBuddy(snac.TLVUserInfo, me)}
 }
 
 // UpdateBuddyDeparted handles the UPDATE_BUDDY TOC command for buddy departure events.
@@ -364,9 +364,19 @@ func sendOrCancel(ctx context.Context, ch chan<- []string, msg []string) {
 	}
 }
 
-// userInfoToUpdateBuddy creates an UPDATE_BUDDY server reply from a User
+// '''''''BUDDY_CAPS2''''''''
+
+// '[BUDDY_CAPS2] [User] [Cap 1, Cap 2, Cap3, etc]
+
+// 'These are the buddies capabilities, such as Chat, Live Video, Direct Connect, etc.
+// 'These are sent with every UPDATE_BUDDY2. Meaning, if a user updates to where they
+// 'can use Direct Connect, you will get sent both packets.
+
+// 'Example: BUDDY_CAPS2:Bizkit047:0,105,1FF,1,101,102,
+
+// userInfoToUpdateBuddy creates an UPDATE_BUDDY or UPDATE_BUDDY2 server reply from a User
 // Info TLV.
-func userInfoToUpdateBuddy(snac wire.TLVUserInfo) string {
+func userInfoToUpdateBuddy(snac wire.TLVUserInfo, me *state.Session) string {
 	online, _ := snac.Uint32BE(wire.OServiceUserInfoSignonTOD)
 	idle, _ := snac.Uint16BE(wire.OServiceUserInfoIdleTime)
 	uc := [3]string{" ", "O", " "}
@@ -375,5 +385,9 @@ func userInfoToUpdateBuddy(snac wire.TLVUserInfo) string {
 	}
 	warning := fmt.Sprintf("%d", snac.WarningLevel/10)
 	class := strings.Join(uc[:], "")
-	return fmt.Sprintf("UPDATE_BUDDY:%s:%s:%s:%d:%d:%s", snac.ScreenName, "T", warning, online, idle, class)
+	ub := "UPDATE_BUDDY"
+	if me.TocVersion() == 2 {
+		ub = "UPDATE_BUDDY2"
+	}
+	return fmt.Sprintf("%s:%s:%s:%s:%d:%d:%s", ub, snac.ScreenName, "T", warning, online, idle, class)
 }
