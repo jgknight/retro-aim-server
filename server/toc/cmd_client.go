@@ -1742,8 +1742,9 @@ func buildToc2Config(fb []wire.FeedbagItem) ([]string, error) {
 	config := []string{}
 
 	type buddy struct {
-		name string
-		note string
+		name  string
+		alias string
+		note  string
 	}
 	type group struct {
 		name    string
@@ -1786,6 +1787,9 @@ func buildToc2Config(fb []wire.FeedbagItem) ([]string, error) {
 			if val, hasVal := item.String(wire.FeedbagAttributesNote); hasVal {
 				buddy.note = val
 			}
+			if val, hasVal := item.String(wire.FeedbagAttributesAlias); hasVal {
+				buddy.alias = val
+			}
 			buddylist.groups[item.GroupID].buddies[item.ItemID] = buddy
 		}
 		if item.ClassID == wire.FeedbagClassIDDeny {
@@ -1809,6 +1813,9 @@ func buildToc2Config(fb []wire.FeedbagItem) ([]string, error) {
 		for _, bid := range group.order {
 			buddy := group.buddies[bid]
 			tmpLine := "b:" + buddy.name
+			if buddy.alias != "" {
+				tmpLine += ":" + buddy.alias
+			}
 			if buddy.note != "" {
 				tmpLine += ":::::" + buddy.note
 			}

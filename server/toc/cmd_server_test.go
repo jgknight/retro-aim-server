@@ -462,6 +462,7 @@ func TestOSCARProxy_RecvBOS_UpdateBuddyArrival(t *testing.T) {
 							TLVList: wire.TLVList{
 								wire.NewTLVBE(wire.OServiceUserInfoSignonTOD, uint32(1234)),
 								wire.NewTLVBE(wire.OServiceUserInfoIdleTime, uint16(5678)),
+								wire.NewTLVBE(wire.OServiceUserInfoUserFlags, wire.OServiceUserFlagOSCARFree),
 							},
 						},
 					},
@@ -481,6 +482,7 @@ func TestOSCARProxy_RecvBOS_UpdateBuddyArrival(t *testing.T) {
 							TLVList: wire.TLVList{
 								wire.NewTLVBE(wire.OServiceUserInfoSignonTOD, uint32(1234)),
 								wire.NewTLVBE(wire.OServiceUserInfoIdleTime, uint16(5678)),
+								wire.NewTLVBE(wire.OServiceUserInfoUserFlags, wire.OServiceUserFlagOSCARFree),
 							},
 						},
 					},
@@ -500,7 +502,7 @@ func TestOSCARProxy_RecvBOS_UpdateBuddyArrival(t *testing.T) {
 							TLVList: wire.TLVList{
 								wire.NewTLVBE(wire.OServiceUserInfoSignonTOD, uint32(1234)),
 								wire.NewTLVBE(wire.OServiceUserInfoIdleTime, uint16(5678)),
-								wire.NewTLVBE(wire.OServiceUserInfoUserFlags, wire.OServiceUserFlagUnavailable),
+								wire.NewTLVBE(wire.OServiceUserInfoUserFlags, wire.OServiceUserFlagOSCARFree|wire.OServiceUserFlagUnavailable),
 							},
 						},
 					},

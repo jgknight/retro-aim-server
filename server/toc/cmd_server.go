@@ -309,7 +309,8 @@ func (s OSCARProxy) convertICBMRendezvous(ctx context.Context, chatRegistry *Cha
 //
 // Command syntax: UPDATE_BUDDY:<Buddy User>:<Online? T/F>:<Evil Amount>:<Signon Time>:<IdleTime>:<UC>
 func (s OSCARProxy) UpdateBuddyArrival(snac wire.SNAC_0x03_0x0B_BuddyArrived, me *state.Session) []string {
-	return []string{userInfoToUpdateBuddy(snac.TLVUserInfo, me)}
+
+	return []string{userInfoToUpdateBuddy(snac.TLVUserInfo, me), userInfoToBuddyCaps(snac.TLVUserInfo, me)}
 }
 
 // UpdateBuddyDeparted handles the UPDATE_BUDDY TOC command for buddy departure events.
@@ -373,13 +374,34 @@ func sendOrCancel(ctx context.Context, ch chan<- []string, msg []string) {
 // 'can use Direct Connect, you will get sent both packets.
 
 // 'Example: BUDDY_CAPS2:Bizkit047:0,105,1FF,1,101,102,
+// wire.OServiceUserInfoOscarCaps
 
 // userInfoToUpdateBuddy creates an UPDATE_BUDDY or UPDATE_BUDDY2 server reply from a User
 // Info TLV.
 func userInfoToUpdateBuddy(snac wire.TLVUserInfo, me *state.Session) string {
 	online, _ := snac.Uint32BE(wire.OServiceUserInfoSignonTOD)
 	idle, _ := snac.Uint16BE(wire.OServiceUserInfoIdleTime)
-	uc := [3]string{" ", "O", " "}
+	uc := [3]string{" ", " ", " "}
+
+	uFlags, hasVal := snac.TLVList.Uint16BE(wire.OServiceUserInfoUserFlags)
+	if !hasVal {
+		// todo: handle if this tlv doesn't exist for some reason
+	}
+
+	if (uFlags & wire.OServiceUserFlagAOL) == wire.OServiceUserFlagAOL {
+		uc[0] = "A"
+	}
+
+	if (uFlags & wire.OServiceUserFlagAdministrator) == wire.OServiceUserFlagAdministrator {
+		uc[1] = "A"
+	} else if (uFlags * wire.OServiceUserFlagWireless) == wire.OServiceUserFlagWireless {
+		uc[1] = "C"
+	} else if (uFlags & wire.OServiceUserFlagUnconfirmed) == wire.OServiceUserFlagUnconfirmed {
+		uc[1] = "U"
+	} else if (uFlags & wire.OServiceUserFlagOSCARFree) == wire.OServiceUserFlagOSCARFree {
+		uc[1] = "O"
+	}
+
 	if snac.IsAway() {
 		uc[2] = "U"
 	}
@@ -390,4 +412,25 @@ func userInfoToUpdateBuddy(snac wire.TLVUserInfo, me *state.Session) string {
 		ub = "UPDATE_BUDDY2"
 	}
 	return fmt.Sprintf("%s:%s:%s:%s:%d:%d:%s", ub, snac.ScreenName, "T", warning, online, idle, class)
+}
+
+func userInfoToBuddyCaps(snac wire.TLVUserInfo, me *state.Session) string {
+	if me.TocVersion() != 2 {
+		return ""
+	}
+	clientCaps := ""
+	if b, hasCaps := snac.TLVList.Bytes(wire.OServiceUserInfoOscarCaps); hasCaps {
+		if len(b)%16 != 0 {
+			// todo: error capability list must be array of 16-byte values
+		}
+		var capStrings []string
+		for i := 0; i < len(b); i += 16 {
+			var c [16]byte
+			copy(c[:], b[i:i+16])
+			uid := uuid.UUID(c)
+			capStrings = append(capStrings, uid.String())
+		}
+		clientCaps = strings.Join(capStrings, ",")
+	}
+	return fmt.Sprintf("BUDDY_CAPS2:%s:%s", snac.ScreenName, clientCaps)
 }

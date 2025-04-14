@@ -2335,6 +2335,7 @@ func TestOSCARProxy_RecvClientCmd_GetStatus(t *testing.T) {
 											TLVList: wire.TLVList{
 												wire.NewTLVBE(wire.OServiceUserInfoSignonTOD, uint32(1234)),
 												wire.NewTLVBE(wire.OServiceUserInfoIdleTime, uint16(5678)),
+												wire.NewTLVBE(wire.OServiceUserInfoUserFlags, wire.OServiceUserFlagOSCARFree),
 											},
 										},
 									},
