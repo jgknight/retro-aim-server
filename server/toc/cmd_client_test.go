@@ -2490,6 +2490,13 @@ func TestOSCARProxy_RecvClientCmd_InitDone(t *testing.T) {
 						},
 					},
 				},
+				feedBagParams: feedBagParams{
+					useFeedbagParams: useFeedbagParams{
+						{
+							me: state.NewIdentScreenName("me"),
+						},
+					},
+				},
 			},
 			wantMsg: []string{},
 		},
@@ -2504,6 +2511,13 @@ func TestOSCARProxy_RecvClientCmd_InitDone(t *testing.T) {
 							me:   state.NewIdentScreenName("me"),
 							body: wire.SNAC_0x01_0x02_OServiceClientOnline{},
 							err:  io.EOF,
+						},
+					},
+				},
+				feedBagParams: feedBagParams{
+					useFeedbagParams: useFeedbagParams{
+						{
+							me: state.NewIdentScreenName("me"),
 						},
 					},
 				},
@@ -2523,9 +2537,17 @@ func TestOSCARProxy_RecvClientCmd_InitDone(t *testing.T) {
 					Return(params.err)
 			}
 
+			fbMgr := newMockFeedbagManager(t)
+			for _, params := range tc.mockParams.feedBagParams.useFeedbagParams {
+				fbMgr.EXPECT().
+					UseFeedbag(ctx, params.me).
+					Return(params.err)
+			}
+
 			svc := OSCARProxy{
 				Logger:             slog.Default(),
 				OServiceServiceBOS: oSvc,
+				FeedbagManager:     fbMgr,
 			}
 			msg := svc.RecvClientCmd(ctx, tc.me, nil, tc.givenCmd, nil, nil)
 
