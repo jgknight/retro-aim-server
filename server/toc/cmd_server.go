@@ -386,19 +386,20 @@ func userInfoToUpdateBuddy(snac wire.TLVUserInfo, me *state.Session) string {
 	uFlags, hasVal := snac.TLVList.Uint16BE(wire.OServiceUserInfoUserFlags)
 	if !hasVal {
 		// todo: handle if this tlv doesn't exist for some reason
+		return ""
 	}
 
-	if (uFlags & wire.OServiceUserFlagAOL) == wire.OServiceUserFlagAOL {
+	if hasFlag(uFlags, wire.OServiceUserFlagAOL) {
 		uc[0] = "A"
 	}
 
-	if (uFlags & wire.OServiceUserFlagAdministrator) == wire.OServiceUserFlagAdministrator {
+	if hasFlag(uFlags, wire.OServiceUserFlagAdministrator) {
 		uc[1] = "A"
-	} else if (uFlags * wire.OServiceUserFlagWireless) == wire.OServiceUserFlagWireless {
+	} else if hasFlag(uFlags, wire.OServiceUserFlagWireless) {
 		uc[1] = "C"
-	} else if (uFlags & wire.OServiceUserFlagUnconfirmed) == wire.OServiceUserFlagUnconfirmed {
+	} else if hasFlag(uFlags, wire.OServiceUserFlagUnconfirmed) {
 		uc[1] = "U"
-	} else if (uFlags & wire.OServiceUserFlagOSCARFree) == wire.OServiceUserFlagOSCARFree {
+	} else if hasFlag(uFlags, wire.OServiceUserFlagOSCARFree) {
 		uc[1] = "O"
 	}
 
@@ -407,11 +408,16 @@ func userInfoToUpdateBuddy(snac wire.TLVUserInfo, me *state.Session) string {
 	}
 	warning := fmt.Sprintf("%d", snac.WarningLevel/10)
 	class := strings.Join(uc[:], "")
-	ub := "UPDATE_BUDDY"
+	cmd := "UPDATE_BUDDY"
 	if me.TocVersion() == 2 {
-		ub = "UPDATE_BUDDY2"
+		cmd = "UPDATE_BUDDY2"
 	}
-	return fmt.Sprintf("%s:%s:%s:%s:%d:%d:%s", ub, snac.ScreenName, "T", warning, online, idle, class)
+	return fmt.Sprintf("%s:%s:%s:%s:%d:%d:%s", cmd, snac.ScreenName, "T", warning, online, idle, class)
+}
+
+// hasFlag checks if a specific flag is set in the bitmask.
+func hasFlag(bitmask, flag uint16) bool {
+	return (bitmask & flag) == flag
 }
 
 func userInfoToBuddyCaps(snac wire.TLVUserInfo, me *state.Session) string {

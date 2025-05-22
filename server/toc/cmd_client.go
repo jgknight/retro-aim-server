@@ -998,7 +998,7 @@ func (s OSCARProxy) FormatNickname(ctx context.Context, me *state.Session, args 
 // Command syntax: toc_dir_search <info information>
 func (s OSCARProxy) GetDirSearchURL(ctx context.Context, me *state.Session, args []byte) []string {
 	if status := me.EvaluateRateLimit(time.Now(), 1); status == wire.RateLimitStatusLimited {
-		return rateLimitExceededErr
+		return []string{rateLimitExceededErr}
 	}
 
 	var info string
@@ -1056,7 +1056,7 @@ func (s OSCARProxy) GetDirSearchURL(ctx context.Context, me *state.Session, args
 // Command syntax: toc_get_dir <username>
 func (s OSCARProxy) GetDirURL(ctx context.Context, me *state.Session, args []byte) []string {
 	if status := me.EvaluateRateLimit(time.Now(), 1); status == wire.RateLimitStatusLimited {
-		return rateLimitExceededErr
+		return []string{rateLimitExceededErr}
 	}
 
 	var user string
@@ -1086,7 +1086,7 @@ func (s OSCARProxy) GetDirURL(ctx context.Context, me *state.Session, args []byt
 // Command syntax: toc_get_info <username>
 func (s OSCARProxy) GetInfoURL(ctx context.Context, me *state.Session, args []byte) []string {
 	if status := me.EvaluateRateLimit(time.Now(), 1); status == wire.RateLimitStatusLimited {
-		return rateLimitExceededErr
+		return []string{rateLimitExceededErr}
 	}
 
 	var user string
@@ -1496,7 +1496,7 @@ func (s OSCARProxy) SetCaps(ctx context.Context, me *state.Session, args []byte)
 // Command syntax: toc_set_config <Config Info>
 func (s OSCARProxy) SetConfig(ctx context.Context, me *state.Session, args []byte) []string {
 	if status := me.EvaluateRateLimit(time.Now(), 1); status == wire.RateLimitStatusLimited {
-		return rateLimitExceededErr
+		return []string{rateLimitExceededErr}
 	}
 
 	// most TOC clients don't quote the config info argument, despite what the
@@ -1930,21 +1930,21 @@ func (s OSCARProxy) runtimeErr(ctx context.Context, err error) []string {
 	return []string{cmdInternalSvcErr}
 }
 
-func (s OSCARProxy) checkRateLimit(ctx context.Context, sender *state.Session, foodGroup uint16, subGroup uint16) (string, bool) {
+func (s OSCARProxy) checkRateLimit(ctx context.Context, sender *state.Session, foodGroup uint16, subGroup uint16) ([]string, bool) {
 	rateClassID, ok := s.SNACRateLimits.RateClassLookup(foodGroup, subGroup)
 	if !ok {
 		s.Logger.ErrorContext(ctx, "rate limit not found, allowing request through")
-		return "", false
+		return []string{}, false
 	}
 
 	if status := sender.EvaluateRateLimit(time.Now(), rateClassID); status == wire.RateLimitStatusLimited {
 		s.Logger.DebugContext(ctx, "(toc) rate limit exceeded, dropping SNAC",
 			"foodgroup", wire.FoodGroupName(foodGroup),
 			"subgroup", wire.SubGroupName(foodGroup, subGroup))
-		return rateLimitExceededErr, true
+		return []string{rateLimitExceededErr}, true
 	}
 
-	return "", false
+	return []string{}, false
 }
 
 // unescape removes escaping from the following TOC characters: \ { } ( ) [ ] $ "
