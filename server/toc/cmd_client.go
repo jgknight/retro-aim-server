@@ -129,6 +129,7 @@ type OSCARProxy struct {
 	OServiceServiceChat OServiceService
 	PermitDenyService   PermitDenyService
 	TOCConfigStore      TOCConfigStore
+	FeedbagService      FeedbagService
 	FeedbagManager      FeedbagManager
 	SNACRateLimits      wire.SNACRateLimits
 	HTTPIPRateLimiter   *IPRateLimiter
@@ -236,6 +237,9 @@ func (s OSCARProxy) RecvClientCmd(
 		return s.RvousAccept(ctx, sessBOS, args)
 	case "toc_rvous_cancel":
 		return s.RvousCancel(ctx, sessBOS, args)
+	case "toc2_set_pdmode":
+		return s.SetPDMode(ctx, sessBOS, args)
+
 	}
 
 	s.Logger.ErrorContext(ctx, fmt.Sprintf("unsupported TOC command %s", cmd))
@@ -1324,6 +1328,51 @@ func (s OSCARProxy) RvousCancel(ctx context.Context, me *state.Session, args []b
 
 	if _, err = s.ICBMService.ChannelMsgToHost(ctx, me, wire.SNACFrame{}, snac); err != nil {
 		return s.runtimeErr(ctx, fmt.Errorf("ICBMService.ChannelMsgToHost: %w", err))
+	}
+
+	return []string{}
+}
+
+// SetPDMode handles the toc2_set_pdmode TOC2 command.
+//
+
+// Command syntax: toc2_set_pdmode <mode>
+func (s OSCARProxy) SetPDMode(ctx context.Context, me *state.Session, args []byte) []string {
+	if errMsg, isLimited := s.checkRateLimit(ctx, me, wire.OService, wire.OServiceIdleNotification); isLimited {
+		return errMsg
+	}
+
+	var pdModeStr string
+
+	if _, err := parseArgs(args, &pdModeStr); err != nil {
+		return s.runtimeErr(ctx, fmt.Errorf("parseArgs: %w", err))
+	}
+
+	mode, err := strconv.Atoi(pdModeStr)
+	if err != nil {
+		return s.runtimeErr(ctx, fmt.Errorf("strconv.Atoi: %w", err))
+	}
+
+	if mode < 0 || mode > 4 {
+		return s.runtimeErr(ctx, errors.New("invalid pd mode specified"))
+	}
+
+	snac := wire.SNAC_0x13_0x09_FeedbagUpdateItem{
+		Items: []wire.FeedbagItem{
+			{
+				ClassID: wire.FeedbagClassIdPdinfo,
+				TLVLBlock: wire.TLVLBlock{
+					TLVList: wire.TLVList{
+						wire.NewTLVBE(wire.FeedbagAttributesPdMode, uint8(mode)),
+					},
+				},
+			},
+		},
+	}
+	fmt.Println("jgk: setting pdmode to " + pdModeStr)
+
+	if _, err := s.FeedbagService.UpsertItem(ctx, me, wire.SNACFrame{}, snac.Items); err != nil {
+		return s.runtimeErr(ctx, fmt.Errorf("FeedbagManager.UpsertItem: %w", err))
 	}
 
 	return []string{}

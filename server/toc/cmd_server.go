@@ -38,7 +38,7 @@ func (s OSCARProxy) RecvBOS(ctx context.Context, me *state.Session, chatRegistry
 			case wire.SNAC_0x03_0x0C_BuddyDeparted:
 				sendOrCancel(ctx, ch, s.UpdateBuddyDeparted(v))
 			case wire.SNAC_0x04_0x07_ICBMChannelMsgToClient:
-				sendOrCancel(ctx, ch, s.IMIn(ctx, chatRegistry, v))
+				sendOrCancel(ctx, ch, s.IMIn(ctx, chatRegistry, me, v))
 			case wire.SNAC_0x01_0x10_OServiceEvilNotification:
 				sendOrCancel(ctx, ch, s.Eviled(v))
 			case wire.SNAC_0x04_0x14_ICBMClientEvent:
@@ -166,7 +166,7 @@ func (s OSCARProxy) Eviled(snac wire.SNAC_0x01_0x10_OServiceEvilNotification) []
 	return []string{fmt.Sprintf("EVILED:%s:%s", warning, who)}
 }
 
-// IMIn handles the IM_IN TOC command.
+// IMIn handles the IM_IN and IM_IN_ENC2 TOC commands.
 //
 // From the TiK documentation:
 //
@@ -174,10 +174,10 @@ func (s OSCARProxy) Eviled(snac wire.SNAC_0x01_0x10_OServiceEvilNotification) []
 //	incoming message, including other colons.
 //
 // Command syntax: IM_IN:<Source User>:<Auto Response T/F?>:<Message>
-func (s OSCARProxy) IMIn(ctx context.Context, chatRegistry *ChatRegistry, snac wire.SNAC_0x04_0x07_ICBMChannelMsgToClient) []string {
+func (s OSCARProxy) IMIn(ctx context.Context, chatRegistry *ChatRegistry, me *state.Session, snac wire.SNAC_0x04_0x07_ICBMChannelMsgToClient) []string {
 	switch snac.ChannelID {
 	case wire.ICBMChannelIM:
-		return []string{s.convertICBMInstantMsg(ctx, snac)}
+		return []string{s.convertICBMInstantMsg(ctx, me, snac)}
 	case wire.ICBMChannelRendezvous:
 		return []string{s.convertICBMRendezvous(ctx, chatRegistry, snac)}
 	default:
@@ -186,8 +186,9 @@ func (s OSCARProxy) IMIn(ctx context.Context, chatRegistry *ChatRegistry, snac w
 	}
 }
 
-// convertICBMInstantMsg converts an ICBM instant message SNAC to a TOC IM_IN response.
-func (s OSCARProxy) convertICBMInstantMsg(ctx context.Context, snac wire.SNAC_0x04_0x07_ICBMChannelMsgToClient) string {
+// convertICBMInstantMsg converts an ICBM instant message SNAC to a TOC IM_IN or TOC2 IM_IN_ENC2 response.
+func (s OSCARProxy) convertICBMInstantMsg(ctx context.Context, me *state.Session, snac wire.SNAC_0x04_0x07_ICBMChannelMsgToClient) string {
+	fmt.Println(("jgk: convertICBMInstantMsg"))
 	buf, ok := snac.TLVRestBlock.Bytes(wire.ICBMTLVAOLIMData)
 	if !ok {
 		return s.runtimeErr(ctx, errors.New("TLVRestBlock.Bytes: missing wire.ICBMTLVAOLIMData"))[0]
@@ -202,6 +203,19 @@ func (s OSCARProxy) convertICBMInstantMsg(ctx context.Context, snac wire.SNAC_0x
 		autoResp = "T"
 	}
 
+	if me.TocVersion() == 2 {
+		// IM_IN_ENC2:<user>:<auto>:<???>:<???>:<buddy status>:<???>:<???>:en:<message>
+		uFlags, hasVal := snac.TLVUserInfo.TLVList.Uint16BE(wire.OServiceUserInfoUserFlags)
+		if !hasVal {
+			// todo: handle if this tlv doesn't exist for some reason
+			fmt.Println("no has val")
+			return ""
+		}
+		ucArray := userClassString(uFlags, snac.IsAway())
+		uc := strings.Join(ucArray[:], "")
+		return fmt.Sprintf("IM_IN_ENC2:%s:%s:::%s:::en:%s", snac.ScreenName, autoResp, uc, txt)
+
+	}
 	return fmt.Sprintf("IM_IN:%s:%s:%s", snac.ScreenName, autoResp, txt)
 }
 
@@ -356,6 +370,30 @@ func (s OSCARProxy) ClientEvent(snac wire.SNAC_0x04_0x14_ICBMClientEvent) []stri
 	return []string{fmt.Sprintf("CLIENT_EVENT2:%s:%d", snac.ScreenName, snac.Event)}
 }
 
+// userClassString generates the 3-character user class (UC) string based on user flags and away status.
+func userClassString(uFlags uint16, isAway bool) [3]string {
+	uc := [3]string{" ", " ", " "}
+
+	if hasFlag(uFlags, wire.OServiceUserFlagAOL) {
+		uc[0] = "A"
+	}
+
+	if hasFlag(uFlags, wire.OServiceUserFlagAdministrator) {
+		uc[1] = "A"
+	} else if hasFlag(uFlags, wire.OServiceUserFlagWireless) {
+		uc[1] = "C"
+	} else if hasFlag(uFlags, wire.OServiceUserFlagUnconfirmed) {
+		uc[1] = "U"
+	} else if hasFlag(uFlags, wire.OServiceUserFlagOSCARFree) {
+		uc[1] = "O"
+	}
+
+	if isAway {
+		uc[2] = "U"
+	}
+	return uc
+}
+
 func sendOrCancel(ctx context.Context, ch chan<- []string, msg []string) {
 	select {
 	case <-ctx.Done():
@@ -381,38 +419,21 @@ func sendOrCancel(ctx context.Context, ch chan<- []string, msg []string) {
 func userInfoToUpdateBuddy(snac wire.TLVUserInfo, me *state.Session) string {
 	online, _ := snac.Uint32BE(wire.OServiceUserInfoSignonTOD)
 	idle, _ := snac.Uint16BE(wire.OServiceUserInfoIdleTime)
-	uc := [3]string{" ", " ", " "}
 
 	uFlags, hasVal := snac.TLVList.Uint16BE(wire.OServiceUserInfoUserFlags)
 	if !hasVal {
 		// todo: handle if this tlv doesn't exist for some reason
 		return ""
 	}
+	ucArray := userClassString(uFlags, snac.IsAway())
+	uc := strings.Join(ucArray[:], "")
 
-	if hasFlag(uFlags, wire.OServiceUserFlagAOL) {
-		uc[0] = "A"
-	}
-
-	if hasFlag(uFlags, wire.OServiceUserFlagAdministrator) {
-		uc[1] = "A"
-	} else if hasFlag(uFlags, wire.OServiceUserFlagWireless) {
-		uc[1] = "C"
-	} else if hasFlag(uFlags, wire.OServiceUserFlagUnconfirmed) {
-		uc[1] = "U"
-	} else if hasFlag(uFlags, wire.OServiceUserFlagOSCARFree) {
-		uc[1] = "O"
-	}
-
-	if snac.IsAway() {
-		uc[2] = "U"
-	}
 	warning := fmt.Sprintf("%d", snac.WarningLevel/10)
-	class := strings.Join(uc[:], "")
 	cmd := "UPDATE_BUDDY"
 	if me.TocVersion() == 2 {
 		cmd = "UPDATE_BUDDY2"
 	}
-	return fmt.Sprintf("%s:%s:%s:%s:%d:%d:%s", cmd, snac.ScreenName, "T", warning, online, idle, class)
+	return fmt.Sprintf("%s:%s:%s:%s:%d:%d:%s", cmd, snac.ScreenName, "T", warning, online, idle, uc)
 }
 
 // hasFlag checks if a specific flag is set in the bitmask.
@@ -420,6 +441,7 @@ func hasFlag(bitmask, flag uint16) bool {
 	return (bitmask & flag) == flag
 }
 
+// userInfoToBuddyCaps creates a BUDDY_CAPS2 server reply from a User Info TLV.
 func userInfoToBuddyCaps(snac wire.TLVUserInfo, me *state.Session) string {
 	if me.TocVersion() != 2 {
 		return ""
@@ -427,7 +449,7 @@ func userInfoToBuddyCaps(snac wire.TLVUserInfo, me *state.Session) string {
 	clientCaps := ""
 	if b, hasCaps := snac.TLVList.Bytes(wire.OServiceUserInfoOscarCaps); hasCaps {
 		if len(b)%16 != 0 {
-			// todo: error capability list must be array of 16-byte values
+			// todo: capability list must be array of 16-byte values
 		}
 		var capStrings []string
 		for i := 0; i < len(b); i += 16 {

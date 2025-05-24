@@ -401,10 +401,10 @@ func (rt Server) login(ctx context.Context, clientFlap *wire.FlapClient) (*state
 	var tocVersion int
 	if string(cmd) == "toc_signon" {
 		tocVersion = 1
-	} else if string(cmd) == "toc2_login" {
+	} else if string(cmd) == "toc2_login" || string(cmd) == "toc2_signon" {
 		tocVersion = 2
 	} else {
-		return nil, errors.New("expected toc_signon or toc2_login")
+		return nil, errors.New("expected toc_signon, toc2_signon, or toc2_login but received " + string(cmd))
 	}
 
 	sessBOS, reply := rt.BOSProxy.Signon(ctx, args, tocVersion)
