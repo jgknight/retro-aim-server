@@ -252,6 +252,15 @@ type tocConfigParams struct {
 	userParams
 }
 
+type feedBagParams struct {
+	useFeedbagParams
+}
+
+type useFeedbagParams []struct {
+	me  state.IdentScreenName
+	err error
+}
+
 type mockParams struct {
 	adminParams
 	authParams
@@ -264,6 +273,7 @@ type mockParams struct {
 	icbmParams
 	locateParams
 	oServiceParams
+	feedBagParams feedBagParams
 	permitDenyParams
 	tocConfigParams
 }
